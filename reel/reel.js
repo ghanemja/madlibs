@@ -252,9 +252,12 @@
 
   async function run() {
     t0 = performance.now(); timeline.length = 0;
+    Sfx.music.start(0.3);
     if (LINKEDIN) await story(); else await intro();
     for (let i = 0; i < ROUNDS.length; i++) await round(ROUNDS[i], i);
     await outro();
+    Sfx.music.stop(1.2);
+    await S.wait(1.3);                          // let the music fade out on the end card
     mark('end');
     return timeline;
   }

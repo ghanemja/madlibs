@@ -3,7 +3,7 @@
 Mad Libs that draw themselves. You get a sentence with a blank, someone makes up a word, and **the moment the word comes in, a stick-figure cartoon acts it out.**
 
 > In the middle of the park stood a gigantic **tree**.
-> Suddenly, the tree began to **explode**! → 💥 *BOOM. The tree is gone.*
+> Suddenly, the tree began to **dance**! → 🎵 *The tree grows a face and starts to boogie.*
 
 ## Play
 

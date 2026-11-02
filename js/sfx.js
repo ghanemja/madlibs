@@ -40,6 +40,56 @@
       const g = a.createGain(); g.gain.value = vol || 0.3;
       src.connect(f); f.connect(g); g.connect(this.out()); src.start(t);
     },
+    // ── background music: an original, synthesized loop (no samples, no licensing) ──
+    // 112 bpm, I–V–vi–IV in C: offbeat ukulele-ish plucks, a bouncy bass, a little
+    // pentatonic tune that varies every other pass, soft kick, clap and hats.
+    music: {
+      timer: null, bus: null, step: 0, next: 0,
+      start(vol) {
+        const a = Sfx.ctx(); if (!a || this.timer) return;
+        this.bus = a.createGain(); this.bus.gain.value = vol == null ? 0.32 : vol; this.bus.connect(Sfx.out());
+        this.step = 0; this.next = a.currentTime + 0.1;
+        const spb = 60 / 112 / 2;                                  // seconds per 8th note
+        const N = (m) => 440 * Math.pow(2, (m - 69) / 12);       // midi → Hz
+        const CHORDS = [[60, 64, 67], [55, 59, 62], [57, 60, 64], [53, 57, 60]];   // C G Am F
+        const BASS = [36, 43, 45, 41];
+        const TUNE = [[72, 0, 76, 0, 79, 0, 76, 74], [74, 0, 71, 0, 74, 76, 74, 0], [72, 0, 76, 0, 81, 79, 76, 0], [77, 76, 74, 0, 72, 0, 0, 0],
+                      [79, 0, 79, 76, 74, 0, 76, 0], [74, 0, 74, 71, 67, 0, 71, 74], [72, 76, 81, 0, 79, 0, 76, 0], [77, 0, 76, 74, 72, 0, 0, 0]];
+        const note = (type, m, t, dur, v, slide) => {
+          const o = a.createOscillator(), g = a.createGain();
+          o.type = type; o.frequency.setValueAtTime(N(m), t); if (slide) o.frequency.exponentialRampToValueAtTime(N(m) * slide, t + dur);
+          g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+          o.connect(g); g.connect(this.bus); o.start(t); o.stop(t + dur + 0.05);
+        };
+        const hit = (t, dur, v, freq, type) => {                  // filtered noise: hats and claps
+          const len = Math.floor(a.sampleRate * dur), buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0);
+          for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+          const src = a.createBufferSource(); src.buffer = buf;
+          const f = a.createBiquadFilter(); f.type = type || 'highpass'; f.frequency.value = freq;
+          const g = a.createGain(); g.gain.value = v;
+          src.connect(f); f.connect(g); g.connect(this.bus); src.start(t);
+        };
+        const tick = () => {
+          while (this.next < a.currentTime + 0.25) {
+            const t = this.next, k = this.step, beat8 = k % 8, bar = Math.floor(k / 8) % 4, phrase = Math.floor(k / 32) % 2;
+            const ch = CHORDS[bar];
+            if (beat8 % 2 === 0) note('sine', BASS[bar] + (beat8 === 6 ? 7 : 0), t, spb * 1.6, 0.5, 0.995);     // bass on the beats
+            if (beat8 === 0 || beat8 === 4) note('sine', 40, t, 0.12, 0.6, 0.5);                                  // soft kick
+            if (beat8 === 2 || beat8 === 6) { ch.forEach((m, i) => note('triangle', m, t + i * 0.012, spb * 1.5, 0.13)); hit(t, 0.12, 0.16, 1800, 'bandpass'); }
+            if (beat8 % 2 === 1) hit(t, 0.04, 0.05, 7000);                                                        // hats on the offbeats
+            const m = TUNE[bar + phrase * 4][beat8];
+            if (m) note('square', m, t, spb * 0.9, 0.05);                                                          // the tune
+            this.step++; this.next += spb;
+          }
+        };
+        tick(); this.timer = setInterval(tick, 40);
+      },
+      stop(fade) {
+        const a = Sfx.ctx(); if (!this.timer || !a) return;
+        clearInterval(this.timer); this.timer = null;
+        const g = this.bus.gain; g.setValueAtTime(g.value, a.currentTime); g.linearRampToValueAtTime(0.0001, a.currentTime + (fade || 1));
+      },
+    },
     play(name) {
       if (!this.on) return;
       try {
