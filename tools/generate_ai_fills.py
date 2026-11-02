@@ -16,6 +16,10 @@ the website itself never needs or sees it.
     # an OpenAI model
     python3 tools/generate_ai_fills.py --provider openai --model gpt-4o --n 3
 
+    # an experiment: the same prompt plus a skill's instructions, saved as its own source
+    python3 tools/generate_ai_fills.py --model claude-sonnet-5-5 --n 3 \
+        --system-extra path/to/SKILL.md --label humanplease
+
     # just rebuild data/ai_fills.js from data/ai_fills.json
     python3 tools/generate_ai_fills.py --js-only
 
@@ -87,7 +91,16 @@ def parse(text, n):
     return [str(w).strip() for w in words]
 
 
-def make_client(provider):
+def skill_text(path):
+    """A SKILL.md body without its YAML frontmatter."""
+    with open(path) as f:
+        t = f.read()
+    if t.startswith('---'):
+        t = t.split('---', 2)[2]
+    return t.strip()
+
+
+def make_client(provider, system):
     if provider == 'anthropic':
         import anthropic
         client = anthropic.Anthropic()
@@ -95,7 +108,7 @@ def make_client(provider):
         def ask(model, prompt, temperature):
             # current Claude models don't take sampling parameters (temperature/top_p): each
             # request is already an independent sample. Thinking counts toward max_tokens.
-            r = client.messages.create(model=model, max_tokens=16000, system=SYSTEM,
+            r = client.messages.create(model=model, max_tokens=16000, system=system,
                                        messages=[{'role': 'user', 'content': prompt}])
             if r.stop_reason == 'refusal':
                 raise ValueError('model declined this story')
@@ -107,7 +120,7 @@ def make_client(provider):
 
         def ask(model, prompt, temperature):
             r = client.chat.completions.create(model=model, temperature=temperature,
-                                               messages=[{'role': 'system', 'content': SYSTEM}, {'role': 'user', 'content': prompt}])
+                                               messages=[{'role': 'system', 'content': system}, {'role': 'user', 'content': prompt}])
             return r.choices[0].message.content
         return ask
     sys.exit('unknown provider: ' + provider)
@@ -121,6 +134,8 @@ def main():
     ap.add_argument('--temperature', type=float, default=1.0)
     ap.add_argument('--stories', help='comma-separated story ids (default: all 50)')
     ap.add_argument('--js-only', action='store_true', help='only rebuild data/ai_fills.js')
+    ap.add_argument('--system-extra', help='append this file (e.g. a SKILL.md) to the system prompt')
+    ap.add_argument('--label', help='suffix for the source name, e.g. humanplease -> anthropic:MODEL+humanplease')
     args = ap.parse_args()
 
     fills = load_fills()
@@ -129,10 +144,18 @@ def main():
         print('rebuilt', FILLS_JS, 'with', len(fills['fills']), 'fill-ins')
         return
 
+    global EXTRA_SHA
+    EXTRA_SHA = None
+    if args.system_extra:
+        import hashlib
+        EXTRA_SHA = hashlib.sha256(open(args.system_extra, 'rb').read()).hexdigest()[:12]
     data = load_funlibs()
     wanted = set(args.stories.split(',')) if args.stories else None
-    ask = make_client(args.provider)
-    source = '%s:%s' % (args.provider, args.model)
+    system = SYSTEM
+    if args.system_extra:
+        system = SYSTEM + '\n\nAlso follow these writing guidelines:\n\n' + skill_text(args.system_extra)
+    ask = make_client(args.provider, system)
+    source = '%s:%s' % (args.provider, args.model) + ('+' + args.label if args.label else '')
     added = 0
     for st in data['stories']:
         if wanted and st['id'] not in wanted:
@@ -152,6 +175,7 @@ def main():
                 'story': st['id'], 'source': source, 'model': args.model, 'method': 'api',
                 'prompt_version': PROMPT_VERSION, 'temperature': args.temperature if args.provider == 'openai' else None,
                 'created': datetime.date.today().isoformat(), 'words': words,
+                **({'system_extra': os.path.basename(args.system_extra), 'system_extra_sha': EXTRA_SHA} if args.system_extra else {}),
             })
             added += 1
             print('%-45s %s' % (st['id'], ', '.join(words)))

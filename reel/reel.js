@@ -8,6 +8,17 @@
     { story: 'scuba-diving', source: 'human', filler: 'US', steps: 2 },
   ];
   const URL_TEXT = 'ghanemja.github.io/madlibs';
+  const LESSONS_ON_LINKEDIN = false;
+  // lesson 3: what loading the humanplease writing skill did (see research/REPORT.md)
+  const LESSON3 = {
+    title: 'Polishing the style isn\'t enough',
+    segs: (st) => [{ t: 'With a human-writing style guide loaded, AI answers matched each other ', hl: false }, { t: pctTxt(st.hp), hl: true }, { t: ' of the time instead of ' + pctTxt(st.ai) + '.', hl: false }],
+  };
+  const TAKEAWAY = {
+    title: 'Sound like YOU, not "funny"',
+    segs: [{ t: 'AI says the most likely funny thing. People say the thing only', hl: false }, { t: ' they ', hl: true }, { t: 'would think of. Specific beats clever.', hl: false }],
+    foot: 'Real data: Fun Libs (Microsoft Research) + Claude',
+  };
   // ?cta=linkedin swaps Instagram's "link in bio" for the URL itself (links live in the post there)
   const LINKEDIN = new URLSearchParams(location.search).get('cta') === 'linkedin';
 
@@ -105,6 +116,19 @@
     }
   }
 
+  // HUMAN vs AI bars for the lessons: [{ label, value, color, text }]
+  function drawBars(rows) {
+    const x0 = 300, w = 600, k = Math.min(1, (performance.now() - ui.barsAt) / 700);
+    rows.forEach((r, i) => {
+      const y = 1462 + i * 92;
+      text(r.label, x0 - 24, y + 4, 44, INK, { align: 'right' });
+      rr(x0, y - 30, w, 60, 14, 'rgba(0,0,0,.06)');
+      const bw = Math.max(16, w * r.value * k);
+      rr(x0, y - 30, bw, 60, 14, r.color, INK, 4);
+      text(r.text, Math.min(x0 + bw + 14, x0 + w - 90), y + 4, 42, INK, { align: 'left' });
+    });
+  }
+
   // ---------------------------------------------------------------- frame
   function frame() {
     ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
@@ -116,6 +140,7 @@
     // title zone
     if (ui.phase === 'intro') { text('Can you tell who wrote it?', 540, 335, 62, INK); text('HUMAN or AI?', 540, 420, 96, PINK, { outline: 10 }); }
     else if (ui.phase === 'story') { text(ui.t1, 540, 335, 58, INK); text(ui.t2, 540, 420, ui.t2.length > 22 ? 70 : 86, PINK, { outline: 10 }); }
+    else if (ui.phase === 'lesson') { text(ui.t1, 540, 335, 50, '#7a7466'); text(ui.t2, 540, 420, ui.t2.length > 26 ? 62 : ui.t2.length > 20 ? 72 : 84, PINK, { outline: 10 }); }
     else if (ui.phase === 'play' || ui.phase === 'ask') { text(`ROUND ${ui.round} of ${ROUNDS.length}`, 540, 335, 58, INK); text(ui.phase === 'ask' ? 'Comment your guess!' : 'Who filled in the blanks?', 540, 415, 70, PINK, { outline: 8 }); }
     else if (ui.phase === 'reveal') {
       text(ui.truth === 'human' ? 'It was a HUMAN!' : 'It was the AI!', 540, 345, 92, ui.truth === 'human' ? BLUE : ORANGE, { outline: 10 });
@@ -138,6 +163,8 @@
     if (ui.phase === 'play' || ui.phase === 'ask' || ui.phase === 'reveal') choiceButtons(ui.phase);
     if (ui.phase === 'intro') { rr(140, 1460, 800, 140, 30, PINK, INK, 6); text('Play along!', 540, 1532, 76, '#fff'); }
     if (ui.phase === 'story' && ui.foot) ui.foot.forEach((l, i) => text(l, 540, 1478 + i * 52, 38, '#7a7466', { weight: '' }));
+    if (ui.phase === 'lesson' && ui.bars) drawBars(ui.bars);
+    if (ui.phase === 'lesson' && ui.foot) text(ui.foot, 540, 1530, 44, INK);
     if (ui.phase === 'end') {
       rr(90, 1450, 900, 160, 30, BLUE, INK, 6);
       if (LINKEDIN) { text('Try it yourself:', 540, 1497, 46, '#fff'); text(URL_TEXT, 540, 1562, 56, '#fff'); }
@@ -239,6 +266,83 @@
     await S.wait(0.4);
   }
 
+  // ---------------------------------------------------------------- lessons learned
+  const norm = (w) => String(w).toLowerCase().trim().replace(/\s+/g, ' ');
+  function sameBlank(fillsByStory) {           // chance two answers to the same blank are identical
+    let same = 0, pairs = 0;
+    for (const sets of Object.values(fillsByStory)) {
+      for (let i = 0; i < sets[0].length; i++) for (let a = 0; a < sets.length; a++) for (let b = a + 1; b < sets.length; b++) { pairs++; if (norm(sets[a][i]) === norm(sets[b][i])) same++; }
+    }
+    return pairs ? same / pairs : 0;
+  }
+  function topShare(fills) {                   // share of answers taken by the 10 favourite words
+    const c = new Map(); let n = 0;
+    for (const ws of fills) for (const w of ws) { c.set(norm(w), (c.get(norm(w)) || 0) + 1); n++; }
+    const top = [...c.entries()].sort((a, b) => b[1] - a[1]);
+    return { share: top.slice(0, 10).reduce((s, [, k]) => s + k, 0) / n, top: top.slice(0, 5).map(([w]) => w) };
+  }
+  function stats() {
+    const by = (src) => { const o = {}; for (const f of AI_FILLS.fills) if (f.source === src) (o[f.story] = o[f.story] || []).push(f.words); return o; };
+    const humans = {}; for (const st of FUNLIBS.stories) humans[st.id] = st.human.map((h) => h.words);
+    const son = by('anthropic:claude-sonnet-5-5'), hp = by('anthropic:claude-sonnet-5-5+humanplease');
+    return {
+      human: sameBlank(humans), ai: sameBlank(son), hp: Object.keys(hp).length ? sameBlank(hp) : null,
+      humanTop: topShare(Object.values(humans).flat()), aiTop: topShare(Object.values(son).flat()),
+      hpTop: Object.keys(hp).length ? topShare(Object.values(hp).flat()) : null,
+    };
+  }
+  const pctTxt = (v) => (v < 0.095 ? (v * 100).toFixed(1) : Math.round(v * 100)) + '%';
+
+  async function lessons() {
+    const st = stats();
+    const lesson = (t2, segs, bars, foot) => { ui.phase = 'lesson'; ui.t1 = 'LESSONS LEARNED'; ui.t2 = t2; ui.segs = segs; ui.bars = bars; ui.foot = foot || null; ui.barsAt = performance.now(); mark(`lesson: ${t2}`); };
+    const bars = (h, a, max) => [
+      { label: 'People', value: h / max, color: BLUE, text: pctTxt(h) },
+      { label: 'AI', value: a / max, color: ORANGE, text: pctTxt(a) },
+    ];
+    // 1. people surprise; the AI agrees with itself
+    S.reset('park'); S.crowdLimit = null;
+    const said = ['magnets!', 'Idaho!', 'coconut!'];
+    const people = said.map((w, i) => { const p = S.add('p' + i, 'person', { x: 110 + i * 130, dir: 1 }); p.alive = true; return p; });
+    const bots = [0, 1, 2].map((i) => { const r = S.add('r' + i, 'robot', { x: 590 + i * 130, dir: -1, scale: 0.85 }); r.alive = true; return r; });
+    lesson('People surprise. AI agrees.', [
+      { t: 'Give two people the same blank and they almost never pick the same word. Ask the AI twice and it often gives the', hl: false }, { t: ' exact same answer', hl: true }, { t: '.', hl: false },
+    ], bars(st.human, st.ai, Math.max(st.ai, 0.01)));
+    people.forEach((p, i) => setTimeout(() => S.bubble(p, said[i], 3.4), i * 250));
+    bots.forEach((r, i) => setTimeout(() => S.bubble(r, 'PICKLES!', 3.4), 900 + i * 250));
+    await S.wait(4.6);
+    // 2. the AI reaches for the safely funny word
+    S.reset('kitchen');
+    const bot = S.add('bot', 'robot', { x: 640, dir: -1 }); bot.alive = true;
+    ['pickles', 'sandwich', 'toaster'].forEach((w, i) => S.add('f' + i, w === 'toaster' ? 'tv' : w === 'pickles' ? 'carrot' : 'burger', { x: 330 + i * 120, alt: 134, scale: 0.5 }));
+    lesson('AI picks the "safe" funny word', [
+      { t: 'Its favourites: ', hl: false }, ...st.aiTop.top.map((w, i, a) => [{ t: w, hl: true }, { t: i < a.length - 1 ? ', ' : '.', hl: false }]).flat(),
+      { t: ' People\'s funniest answers were specific and personal: magnets, Idaho, coconut.', hl: false },
+    ], [{ label: 'People', value: st.humanTop.share / Math.max(st.aiTop.share, 0.01), color: BLUE, text: pctTxt(st.humanTop.share) }, { label: 'AI', value: 1, color: ORANGE, text: pctTxt(st.aiTop.share) }]);
+    ui.foot = null;
+    await S.act(bot, 'think');
+    await S.wait(2.6);
+    // 3. polishing the style doesn't change the word choice (filled in from the humanplease run)
+    if (st.hp != null) {
+      S.reset('school');
+      const r = S.add('r', 'robot', { x: 640, dir: -1 }); r.alive = true; r.acc.add('glasses');
+      lesson(LESSON3.title, LESSON3.segs(st), [
+        { label: 'AI', value: st.ai / Math.max(st.ai, st.hp, 0.01), color: ORANGE, text: pctTxt(st.ai) },
+        { label: '+skill', value: st.hp / Math.max(st.ai, st.hp, 0.01), color: '#8a5fd0', text: pctTxt(st.hp) },
+      ]);
+      await S.act(r, 'think');
+      await S.wait(2.8);
+    }
+    // the takeaway
+    S.reset('park');
+    const a = S.add('a', 'person', { x: 330, dir: 1 }), b = S.add('b', 'robot', { x: 650, dir: -1 });
+    a.alive = b.alive = true;
+    lesson(TAKEAWAY.title, TAKEAWAY.segs, null, TAKEAWAY.foot);
+    S.bubble(a, 'nine MAGNETS!', 3.5);
+    await S.act(a, 'laugh');
+    await S.wait(3.2);
+  }
+
   async function outro() {
     ui.phase = 'end'; mark('outro');
     ui.segs = [{ t: 'Answers: ', hl: false }, ...ROUNDS.map((r, i) => [{ t: r.source === 'human' ? 'HUMAN' : 'AI', hl: true }, { t: i < ROUNDS.length - 1 ? ', ' : '.', hl: false }]).flat(), { t: LINKEDIN ? ' Stories: Microsoft Research\'s Fun Libs (EMNLP 2017). Human answers: YodaLib (COLING 2020).' : ' Real Mad Libs data from a published humor study. Can you beat a coin flip?', hl: false }];
@@ -255,6 +359,7 @@
     Sfx.music.start(0.3);
     if (LINKEDIN) await story(); else await intro();
     for (let i = 0; i < ROUNDS.length; i++) await round(ROUNDS[i], i);
+    if (!LINKEDIN || LESSONS_ON_LINKEDIN) await lessons();
     await outro();
     Sfx.music.stop(1.2);
     await S.wait(1.3);                          // let the music fade out on the end card
