@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Doodle Libs Reel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; background: #222; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 12px; font-family: "Patrick Hand", sans-serif; color: #fff; }
+    #reel { height: calc(100vh - 80px); aspect-ratio: 9 / 16; background: #f4efe2; }
+    #stage { position: absolute; left: -9999px; width: 1080px; height: 608px; }
+    button { font: inherit; font-size: 20px; padding: 6px 16px; }
+  </style>
+</head>
+<body>
+  <!-- Vertical 1080x1920 "Human or AI?" reel, rendered with the Doodle Libs engine.
+       Open this page and press Record, or run: node tools/make_reel.js -->
+  <canvas id="reel" width="1080" height="1920"></canvas>
+  <div><button id="play">▶ Preview</button> <button id="rec">● Record video</button> <span id="status"></span></div>
+  <canvas id="stage"></canvas>
+
+  <script src="../js/sketch.js"></script>
+  <script src="../js/things.js"></script>
+  <script src="../js/places.js"></script>
+  <script src="../js/sfx.js"></script>
+  <script src="../js/stage.js"></script>
+  <script src="../js/verbs.js"></script>
+  <script src="../js/lexicon.js"></script>
+  <script src="../js/director.js"></script>
+  <script src="../js/stories.js"></script>
+  <script src="../data/funlibs.js"></script>
+  <script src="../data/ai_fills.js"></script>
+  <script src="reel.js"></script>
+</body>
+</html>

@@ -64,6 +64,17 @@ python3 tools/analyze.py --guesses doodle-libs-research-*.json
 
 `research/REPORT.md` compares groups on variety of words, how often two answers to the same blank match, how much a group leans on favorite words, and overlap with the original text. Early look, using the demo seed set: the AI reused a small comic vocabulary (*sticky, soggy, haunted, hamsters*…), with 30% distinct answers versus 76% for humans at the same sample size. That seed set was written in one pass, so treat it as a demo and regenerate with the script before drawing conclusions.
 
+### Instagram Reel
+
+`reel/` renders a vertical 1080×1920 "Human or AI?" video with the same cartoon engine: 3 rounds, a 3-2-1 countdown for viewers to guess, then the reveal. `reel/SCRIPT.md` has a timed voiceover script and a post caption.
+
+```bash
+npm install playwright && npx playwright install chromium   # once; also needs ffmpeg
+node tools/make_reel.js doodle-libs-reel.mp4
+```
+
+Change the rounds by editing `ROUNDS` at the top of `reel/reel.js`. You can also preview or record in the browser at `/reel/`.
+
 ## How words become cartoons
 
 | You type | What happens |
