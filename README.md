@@ -28,6 +28,40 @@ It's all static files with relative paths, so Pages works out of the box: **Sett
 - **Download**: at the end, 🎬 *Download video* records the whole cartoon (1280×720, with sound effects and the story as subtitles), or 📸 *Save picture* saves the current frame as a PNG
 - **Share link**: the story and your words are packed into the URL, so a friend who opens it sees your cartoon
 
+## 🔬 Research lab: Human or AI?
+
+A Mad Libs Turing test, built on real humor-research data.
+
+- **Human or AI?**: watch a filled-in story as a cartoon, rate how funny it is, and guess whether a human or an AI chose the words. Half the rounds are human, half AI.
+- **Fill in a research story**: play any of the 50 research stories yourself, then see a table comparing your words with a human player's, an AI's, and the original text.
+- **Download my research data**: your guesses, ratings and answers are kept in your browser and download as JSON.
+
+### The data
+
+| | |
+|---|---|
+| Stories + human answers | **YodaLib** (Garimella, Banea, Hossain & Mihalcea, COLING 2020), which reuses the **Fun Libs** stories of Hossain, Krumm, Vanderwende, Horvitz & Kautz (EMNLP 2017). 50 Mad Libs made from Wikipedia paragraphs, each filled in by 3 US and 3 Indian Mechanical Turk players (300 answers), each rated 0–3 for funniness, coherence, incongruity and deviation by 5 judges. Download: [yodalib.crosslingual.humor.zip](https://web.eecs.umich.edu/~mihalcea/downloads/yodalib.crosslingual.humor.zip) |
+| AI answers | `data/ai_fills.json`. Ships with a demo seed set of 100 answers written by a Claude model. Add real, independently sampled answers from any model with `tools/generate_ai_fills.py` |
+
+If you use the dataset, please cite both papers.
+
+### Research tools
+
+```bash
+# rebuild data/funlibs.js from the unzipped dataset
+python3 tools/convert_yodalib.py path/to/yodalib.crosslingual.humor
+
+# add AI answers (runs on your machine with your own API key; the site never sees it)
+pip install anthropic && export ANTHROPIC_API_KEY=...
+python3 tools/generate_ai_fills.py --provider anthropic --model claude-sonnet-5-5 --n 3
+python3 tools/generate_ai_fills.py --provider openai --model gpt-4o --n 3
+
+# compare word choices (and score guess-game downloads) -> research/REPORT.md
+python3 tools/analyze.py --guesses doodle-libs-research-*.json
+```
+
+`research/REPORT.md` compares groups on variety of words, how often two answers to the same blank match, how much a group leans on favorite words, and overlap with the original text. Early look, using the demo seed set: the AI reused a small comic vocabulary (*sticky, soggy, haunted, hamsters*…), with 30% distinct answers versus 76% for humans at the same sample size. That seed set was written in one pass, so treat it as a demo and regenerate with the script before drawing conclusions.
+
 ## How words become cartoons
 
 | You type | What happens |
@@ -60,6 +94,9 @@ js/director.js  story templates → stage actions, custom story compiler
 js/stories.js   built-in stories + word-type hints
 js/sfx.js       synthesized sound effects (Web Audio)
 js/app.js       UI flow
+js/research.js  Human or AI? game, research play mode, data export
+data/           Fun Libs stories + human answers, AI answers
+tools/          dataset converter, AI answer generator, analysis
 ```
 
 ### Adding a story

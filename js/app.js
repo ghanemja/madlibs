@@ -7,7 +7,7 @@
   const S = new Stage($('stage'));
   window.stage = S; // handy for poking around in the console
 
-  const state = { story: null, answers: {}, i: -1, runner: null, blanks: [], bi: 0, busy: false, used: new Set(), mode: 'play' };
+  const state = { story: null, answers: {}, i: -1, runner: null, blanks: [], bi: 0, busy: false, used: new Set(), mode: 'play', run: 0, opts: {} };
   const prefs = { secret: false, voice: false, sound: true, style: 'toon' };
   try { Object.assign(prefs, JSON.parse(localStorage.getItem('doodlelibs.prefs') || '{}')); } catch (e) { /* private mode */ }
 
@@ -133,22 +133,29 @@
   };
 
   // ---------------------------------------------------------------- play
-  $('home').onclick = () => { S.reset('park'); show('menu'); };
+  $('home').onclick = () => { state.run++; S.caption = null; S.reset('park'); show('menu'); };
 
   async function runSetup(story) {
     S.reset(story.place);
+    S.crowdLimit = story.crowd || null;
     for (const op of story.setup || []) await runOp(S, op, state.answers);
   }
 
-  async function startStory(story, answers) {
+  // opts.guess: research guessing game — play the filled-in story without the word card
+  async function startStory(story, answers, opts) {
+    opts = opts || {};
+    const run = ++state.run;
     state.story = story; state.answers = {}; state.i = -1; state.used = new Set(); state.mode = 'play';
+    state.opts = opts;
     show('play');
     $('storyTitle').textContent = story.title;
-    $('end').hidden = true; $('prompt').hidden = false;
+    $('end').hidden = true; $('prompt').hidden = !!opts.guess;
+    if ($('guess')) $('guess').hidden = !opts.guess;
     $('sentence').innerHTML = ''; $('steps').innerHTML = '';
     setBusy(true);
+    if (answers) { state.answers = answers; return replay(opts.guess ? { quiet: true, onDone: opts.onDone } : {}); }
     await runSetup(story);
-    if (answers) { state.answers = answers; return replay(); }
+    if (run !== state.run) return;
     nextStep();
   }
 
@@ -184,6 +191,7 @@
   }
 
   async function nextStep() {
+    const run = state.run;
     state.i++;
     const steps = state.story.steps;
     if (state.i >= steps.length) return finish();
@@ -196,8 +204,10 @@
     renderSteps(); renderSentence();
     setBusy(true);
     await state.runner.run();
+    if (run !== state.run) return;
     if (!state.blanks.length) {
       await Promise.all([speak(plainSentence(step)), S.wait(1.2)]);
+      if (run !== state.run) return;
       return nextStep();
     }
     askBlank();
@@ -207,7 +217,7 @@
     const b = state.blanks[state.bi];
     const T = TYPES[b.type] || TYPES.word;
     const raw = b.raw && Director.normType(b.raw) === b.type && !/^(noun|verb|adjective|name|place|sound|animal|food|color|plural noun|plural)$/i.test(b.raw.trim()) ? b.raw.trim() : null;
-    $('ask').innerHTML = `Give me ${raw ? 'a <b>' + esc(raw.toUpperCase()) + '</b>' : T.ask.replace(/([A-Z][A-Z ]+)/, '<b>$1</b>')}`;
+    $('ask').innerHTML = `Give me ${raw ? (/^[aeiou]/i.test(raw) ? 'an' : 'a') + ' <b>' + esc(raw.toUpperCase()) + '</b>' : T.ask.replace(/([A-Z][A-Z ]+)/, '<b>$1</b>')}`;
     $('hint').textContent = T.hint;
     $('word').value = '';
     renderSentence();
@@ -233,12 +243,15 @@
     state.bi++;
     renderSentence();
     setBusy(true);
+    const run = state.run;
     const step = state.story.steps[state.i];
     const done = state.bi >= state.blanks.length;
     const talk = done ? speak(plainSentence(step)) : Promise.resolve();
     await state.runner.run();
+    if (run !== state.run) return;
     if (!done) { askBlank(); return; }
     await Promise.all([talk, S.wait(0.8)]);
+    if (run !== state.run) return;
     nextStep();
   };
 
@@ -254,32 +267,41 @@
     $('toast').hidden = true;
     $('storyText').innerHTML = storyHtml();
     $('end').scrollTop = 0;
+    if (window.App && App.onFinish) App.onFinish(state);
   }
 
+  // opts.record: burn captions in for video; opts.quiet: leave the cards alone (guess game)
   async function replay(opts) {
     opts = opts || {};
+    const run = ++state.run;
+    const live = () => run === state.run;
     state.mode = 'replay';
-    $('end').hidden = true; $('prompt').hidden = false;
-    setBusy(true);
-    $('watching').textContent = opts.record ? '🎬 recording your video… keep this tab open' : '🎬 now playing…';
+    if (!opts.quiet) {
+      $('end').hidden = true; $('prompt').hidden = false;
+      setBusy(true);
+      $('watching').textContent = opts.record ? '🎬 recording your video… keep this tab open' : '🎬 now playing…';
+    }
     if (opts.record) { S.titleCard = state.story.title; S.caption = S.titleCard; }
     await runSetup(state.story);
+    if (!live()) return;
     if (opts.record) { await S.wait(1.2); S.caption = null; }
     for (let i = 0; i < state.story.steps.length; i++) {
-      state.i = i; state.blanks = []; renderSteps();
+      state.i = i; state.blanks = [];
       const step = state.story.steps[i];
-      renderSentence();
-      if (opts.record) S.caption = plainSentence(step);
+      if (!opts.quiet) { renderSteps(); renderSentence(); }
+      if (opts.record || opts.quiet) S.caption = plainSentence(step);
       const talk = opts.record ? Promise.resolve() : speak(plainSentence(step));
       const r = new StepRunner(S, step, state.answers);
       await r.run();
+      if (!live()) return;
       await Promise.all([talk, S.wait(opts.record ? 1.4 : 1)]);
+      if (!live()) return;
     }
     if (opts.record) { S.caption = S.titleCard = 'THE END'; await S.wait(1.6); }
     S.caption = null;
     $('watching').textContent = '✏️ drawing…';
     state.mode = 'play';
-    finish();
+    if (opts.onDone) opts.onDone(); else finish();
   }
 
   // ---------------------------------------------------------------- downloads
@@ -330,7 +352,7 @@
 
   $('replay').onclick = () => replay();
   $('again').onclick = () => startStory(state.story);
-  $('newStory').onclick = () => { S.reset('park'); show('menu'); };
+  $('newStory').onclick = () => { state.run++; S.reset('park'); show('menu'); };
 
   // ---------------------------------------------------------------- sharing
   const b64e = (s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -359,5 +381,7 @@
       return true;
     } catch (e) { return false; }
   }
+  // small API for js/research.js
+  window.App = Object.assign(window.App || {}, { startStory, show, S, state, esc, saveBlob, buildMenu, storyHtml, stop: () => { state.run++; S.caption = null; } });
   if (!fromHash()) show('menu');
 })();

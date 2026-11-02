@@ -157,3 +157,32 @@ details li { margin-bottom: 3px; }
   .btn { font-size: 19px; padding: 6px 12px; }
   .row { flex-wrap: wrap; }
 }
+
+/* research lab */
+.lab { margin-top: 26px; }
+.lab-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.lab h2 em { font-style: normal; background: linear-gradient(transparent 55%, var(--marker) 55%); padding: 0 4px; }
+.lab p { margin: 6px 0; }
+.pickrow { display: inline-flex; gap: 6px; align-items: center; }
+#labPick { font-family: inherit; font-size: 18px; padding: 5px 8px; border: 2.5px solid var(--ink); border-radius: 12px; background: #fff; max-width: 260px; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--accent2); text-decoration: underline; font-size: inherit; }
+.btn.blue { background: var(--accent2); }
+.badge { background: var(--marker); border: 2px solid var(--ink); border-radius: 10px; padding: 0 10px; font-size: 17px; }
+.guess, .end { flex: 0 1 auto; min-height: 0; overflow-y: auto; padding-top: 12px; padding-bottom: 12px; }
+.guess { max-height: 58%; }
+.guess h2 { font-size: 24px; margin: 6px 0 2px; }
+.guess .story-text { font-size: 19px; line-height: 1.45; }
+.story-text p { margin: 0 0 4px; }
+.story-text .w.orig { background: linear-gradient(transparent 50%, #bfe3ff 50%); }
+.funny { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.funny button { background: var(--paper); border: 2px solid var(--ink); border-radius: 10px; font-size: 20px; padding: 0 6px; opacity: .6; }
+.funny button[aria-pressed="true"] { background: var(--marker); opacity: 1; transform: scale(1.1); }
+.ask-who { font-size: 22px; font-weight: bold; margin: 8px 0 0; }
+.verdict { font-size: 26px; font-weight: bold; margin: 8px 0 2px; }
+.verdict.ok { color: #2b8a3e; }
+.verdict.no { color: var(--accent); }
+.compare h3 { margin: 14px 0 6px; font-size: 22px; }
+.tbl { overflow-x: auto; }
+.compare table { border-collapse: collapse; font-size: 17px; width: 100%; }
+.compare th, .compare td { border-bottom: 1.5px solid var(--line); padding: 3px 8px; text-align: left; white-space: nowrap; }
+.compare th { font-size: 15px; color: var(--muted); }

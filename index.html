@@ -30,6 +30,36 @@
           type <b>“explode”</b> and the tree really explodes.</p>
       </div>
       <div class="cards" id="cards"></div>
+
+      <section class="paper lab" id="lab">
+        <div class="lab-head">
+          <h2>🔬 Research lab: <em>Human or AI?</em></h2>
+          <span class="muted small" id="labMeta"></span>
+        </div>
+        <p>A Mad Libs Turing test. These stories come from published humor research, where real people filled in the blanks
+          and five judges rated how funny each result was. Watch a filled-in story, then guess: did a <b>human</b> pick those words,
+          or an <b>AI</b>?</p>
+        <div class="row wrap">
+          <button class="btn" id="labGuess">🤖 Play “Human or AI?”</button>
+          <span class="pickrow">
+            <button class="btn ghost" id="labPlay">✍️ Fill in</button>
+            <select id="labPick" aria-label="Research story to fill in"></select>
+          </span>
+        </div>
+        <p class="small"><span id="labScore"></span></p>
+        <div class="row wrap small">
+          <button class="linkbtn" id="labExport">⬇️ Download my research data (<span id="labCount">0</span> records)</button>
+          <button class="linkbtn" id="labClear">🗑️ Clear my data</button>
+        </div>
+        <details class="muted small">
+          <summary>About the data</summary>
+          <p>Stories and human answers come from the <b>YodaLib</b> release (Garimella, Banea, Hossain &amp; Mihalcea, COLING 2020), which reuses the
+            <b>Fun Libs</b> stories of Hossain, Krumm, Vanderwende, Horvitz &amp; Kautz (EMNLP 2017). Each story has six human answers
+            (three from US players, three from India), each rated 0–3 for funniness by five judges.
+            AI answers are in <code>data/ai_fills.json</code>; add more models with <code>tools/generate_ai_fills.py</code>.
+            Your guesses and answers stay in this browser until you download them.</p>
+        </details>
+      </section>
     </section>
 
     <!-- custom story editor -->
@@ -85,9 +115,35 @@
         <p class="watching" id="watching" hidden>✏️ drawing…</p>
       </div>
 
+      <div class="paper guess" id="guess" hidden>
+        <div class="lab-head">
+          <span class="badge" id="gRound">Round 1</span>
+          <button class="linkbtn small" id="gQuit">✕ Quit</button>
+        </div>
+        <h2 id="gTitle"></h2>
+        <div class="story-text" id="gText"></div>
+        <div id="gButtons">
+          <div class="funny" id="gFunny"><span class="muted small">How funny is it? <i>(optional)</i></span>
+            <button data-v="0" aria-pressed="false" title="Not funny">😐</button><button data-v="1" aria-pressed="false" title="A little">🙂</button><button data-v="2" aria-pressed="false" title="Funny">😄</button><button data-v="3" aria-pressed="false" title="Very funny">🤣</button>
+          </div>
+          <p class="ask-who">Who filled in the blanks?</p>
+          <div class="row wrap">
+            <button class="btn" id="gHuman">🧑 A human</button>
+            <button class="btn blue" id="gAI">🤖 An AI</button>
+          </div>
+        </div>
+        <div id="gResult" hidden></div>
+        <div class="row wrap">
+          <button class="btn" id="gNext" hidden>Next story ▶</button>
+          <button class="btn ghost" id="gOrig" hidden>📖 Show the original words</button>
+          <button class="btn ghost" id="gReplay" hidden>↻ Watch again</button>
+        </div>
+      </div>
+
       <div class="paper end" id="end" hidden>
         <h2>The End!</h2>
         <div class="story-text" id="storyText"></div>
+        <div class="compare" id="compare"></div>
         <div class="row wrap">
           <button class="btn" id="replay">▶ Watch the whole cartoon</button>
           <button class="btn ghost" id="video">🎬 Download video</button>
@@ -111,5 +167,8 @@
   <script src="js/director.js"></script>
   <script src="js/stories.js"></script>
   <script src="js/app.js"></script>
+  <script src="data/funlibs.js"></script>
+  <script src="data/ai_fills.js"></script>
+  <script src="js/research.js"></script>
 </body>
 </html>

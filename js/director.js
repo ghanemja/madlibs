@@ -30,7 +30,27 @@
     const def = THINGS[n.key];
     const count = o.plural || (n.plural && o.plural !== false && o.allowPlural) ? 3 : 1;
     const base = (o.scale || 1) * (count > 1 ? 0.6 : 1);
+    // keep long stories readable: poof away the oldest props when the stage gets crowded
+    if (this.crowdLimit) {
+      const props = () => this.actors.filter((a) => a.id !== 'hero' && !a.gone && !a.def.sky).sort((a, b) => a.z - b.z);
+      let list = props();
+      while (list.length && list.length + count > this.crowdLimit) {
+        const old = list.shift();
+        this.poof(old.cx, old.cy, 6);
+        this.actors.splice(this.actors.indexOf(old), 1);
+      }
+    }
     let x0 = o.x != null ? o.x : 640;
+    if (o.autoX) {
+      // pick the open spot farthest from everyone already on stage
+      const taken = this.actors.filter((a) => !a.gone && !a.def.sky).map((a) => a.x);
+      let best = 640, bestD = -1;
+      for (let x = 380; x <= 860; x += 40) {
+        const d = taken.length ? Math.min(...taken.map((t) => Math.abs(t - x))) : 999;
+        if (d > bestD) { bestD = d; best = x; }
+      }
+      x0 = best;
+    }
     const gap = Math.max(60, def.w * base * 0.95);
     if (count > 1) x0 = Math.max(gap + 40, Math.min(W - gap - 40, x0));
     const actors = [];
@@ -197,7 +217,7 @@
     if (/plural/.test(t) || t === 'nouns' || t === 'things') return 'plural';
     if (/animal|creature|pet/.test(t)) return 'animal';
     if (/food|snack|dessert|fruit|vegetable|drink|meal/.test(t)) return 'food';
-    if (/^(noun|thing|object|item|vehicle|toy)$/.test(t)) return 'noun';
+    if (/^(noun|thing|object|item|vehicle|toy|body part|liquid)$/.test(t)) return 'noun';
     if (/adverb/.test(t)) return 'adverb';
     if (/verb|action/.test(t)) return 'verb';
     if (/colou?r/.test(t)) return 'color';
@@ -260,7 +280,7 @@
             else { ops.push({ op: 'spawnPerson', id: key, key, x: xs[spawnIdx++ % xs.length] }); lastActor = key; actorKeys.add(key); }
             break;
           case 'noun': case 'animal': case 'food': case 'plural':
-            ops.push({ op: 'spawn', id: key, key, adj: pendingAdj || undefined, x: xs[spawnIdx++ % xs.length], plural: tk.type === 'plural', from: tk.type === 'animal' ? pick(['left', 'right', 'sky', 'pop']) : 'pop' });
+            ops.push({ op: 'spawn', id: key, key, adj: pendingAdj || undefined, autoX: true, plural: tk.type === 'plural', from: tk.type === 'animal' ? pick(['left', 'right', 'sky', 'pop']) : 'pop' });
             pendingAdj = null; lastActor = key; actorKeys.add(key);
             break;
           case 'color': case 'adjective':
@@ -285,7 +305,7 @@
       steps.push({ text: text.trim(), ops });
     }
     return {
-      id: 'custom', title: title || 'My Story', custom: src, place: 'park',
+      id: 'custom', title: title || 'My Story', custom: src, place: 'park', crowd: 4,
       setup: [{ op: 'add', id: 'hero', thing: 'person', x: -60 }, { op: 'walk', who: 'hero', x: 250 }],
       steps,
     };
@@ -334,7 +354,7 @@
       }
       case 'name': return S.setName(op.who || 'hero', word);
       case 'walk': { const A = S.resolve(op.who)[0]; if (A) { if (A.gone) await S.reappear(A); await S.walkTo(A, op.x, op.speed); if (op.face) A.dir = op.face; } return; }
-      case 'spawn': return S.spawn(op.id || op.key, word, { x: op.x, alt: op.alt, from: op.from, adjText: op.adj ? ans[op.adj] : null, plural: op.plural, scale: op.scale, alive: op.alive, allowPlural: op.allowPlural });
+      case 'spawn': return S.spawn(op.id || op.key, word, { autoX: op.autoX, x: op.x, alt: op.alt, from: op.from, adjText: op.adj ? ans[op.adj] : null, plural: op.plural, scale: op.scale, alive: op.alive, allowPlural: op.allowPlural });
       case 'act': return S.doVerb(op.who, word, { target: op.target });
       case 'verb': {
         const actors = S.resolve(op.who);
