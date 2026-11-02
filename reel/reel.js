@@ -3,9 +3,9 @@
 // Fun Libs story, filled in either by a real human player or by the AI.
 (function () {
   const ROUNDS = [
-    { story: 'hot-air-balloons', source: 'human', filler: 'India', steps: 2 },
-    { story: 'golf', source: 'ai', ai: 0, steps: 2 },
-    { story: 'zombies', source: 'human', filler: 'US', steps: 2 },
+    { story: 'baseball', source: 'human', filler: 'India', steps: 2 },
+    { story: 'golf', source: 'ai', aiSource: 'anthropic:claude-sonnet-5-5', ai: 0, steps: 2 },
+    { story: 'scuba-diving', source: 'human', filler: 'US', steps: 2 },
   ];
   const URL_TEXT = 'ghanemja.github.io/madlibs';
   // ?cta=linkedin swaps Instagram's "link in bio" for the URL itself (links live in the post there)
@@ -172,8 +172,8 @@
       words = h.words;
       detail = `A real player from ${h.filler === 'US' ? 'the US' : h.filler}. Judges rated it ${h.funny.toFixed(1)}/3 funny.`;
     } else {
-      words = AI_FILLS.fills.filter((f) => f.story === cfg.story)[cfg.ai || 0].words;
-      detail = 'The words were picked by an AI.';
+      words = AI_FILLS.fills.filter((f) => f.story === cfg.story && (!cfg.aiSource || f.source === cfg.aiSource))[cfg.ai || 0].words;
+      detail = cfg.aiSource === 'anthropic:claude-sonnet-5-5' ? 'The words were picked by Claude Sonnet 5.5.' : 'The words were picked by an AI.';
     }
     const answers = Object.fromEntries(words.map((w, k) => ['b' + (k + 1), w]));
     const story = Director.compileCustom(st.template, st.title);
@@ -204,9 +204,9 @@
     S.reset('park'); S.crowdLimit = null;
     const me = S.add('me', 'person', { x: 280, dir: 1 }); me.alive = true;
     const tree = S.add('tree', 'tree', { x: 700, scale: 1.2, label: 'tree', labelFor: S.time + 99 }); tree.alive = true;
-    beat('It started as a toy:', 'Mad Libs that draw themselves', [{ t: 'Type a word into the blank and a stick figure acts it out. “The tree began to ', hl: false }, { t: 'explode', hl: true }, { t: '.”', hl: false }]);
+    beat('It started as a toy:', 'Mad Libs that draw themselves', [{ t: 'Type a word into the blank and a stick figure acts it out. “The tree began to ', hl: false }, { t: 'dance', hl: true }, { t: '.”', hl: false }]);
     await S.wait(1.6);
-    await S.act(tree, 'explode');
+    await Promise.all([S.act(tree, 'dance'), S.act(me, 'laugh')]);
     await S.wait(2.2);
     // 2. the friend
     S.reset('park');

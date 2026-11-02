@@ -48,7 +48,7 @@
     </div>
     <div class="stage"><canvas id="stage"></canvas></div>
     <div class="col right">
-      <div class="card">“A hot air balloon is a type of <span class="w">sandwich</span>. It is lifted by <span class="w">exploding</span> the air inside the <span class="w">bread</span>.”</div>
+      <div class="card">“A game of baseball is played by two teams on a <span class="w">magnetic</span> field. Each team has nine <span class="w">magnets</span>.”</div>
       <div class="btns"><div class="btn h">HUMAN</div><div class="btn a">AI</div></div>
       <div class="foot"><b>ghanemja.github.io/madlibs</b><br>Stories: Microsoft Research’s Fun Libs · Human answers: YodaLib</div>
     </div>
@@ -85,8 +85,11 @@
         await (document.fonts ? document.fonts.ready : Promise.resolve());
         await S.wait(0.6);
         S.act(p, 'jump'); S.act(bot, 'wave');
-        S.act(tree, 'explode');
-        await S.wait(0.42);
+        S.act(tree, 'dance');
+        await S.wait(0.5);
+        S.burst('BOING!', 480, 170, { size: 72 });
+        for (let i = 0; i < 4; i++) S.particle({ kind: 'note', text: ['♪', '♫'][i % 2], x: 560 + (i % 2) * 34, y: 300 + i * 34, max: 9, size: 40 });
+        await S.wait(0.12);
         S.speedMul = 0;                         // freeze mid-explosion for the still
         await new Promise((res) => setTimeout(res, 300));
         return true;
