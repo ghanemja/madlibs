@@ -123,7 +123,7 @@
     const pose = personPose(A, P);
     const hipY = -44, torso = 44, headR = 15;
     const neckY = hipY - torso;
-    const line = A.color ? { ink: Color.shade(A.color, -0.45), lw: 3.5 } : undefined;
+    const line = A.color ? { ink: Color.shade(A.color, -0.45), lw: S.toon ? 6.5 : 3.5 } : (S.toon ? { lw: 6 } : undefined);
     // legs
     limb(-2, hipY, pose.ll, pose.lk, 23, 23, line);
     limb(2, hipY, pose.rl, -pose.rk, 23, 23, line);

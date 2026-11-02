@@ -226,6 +226,10 @@
       S.begin(c, this.seed);
       const dark = !!this.place.dark;
 
+      const toon = S.toon;
+      S.lw = toon ? 2.6 : 3; S.amp = toon ? 0.9 : 1.4;
+      const css = toon ? 'saturate(1.3) contrast(1.05)' : 'none';
+      if (this.canvas.style.filter !== css) this.canvas.style.filter = css;
       // backdrop, cross-fading between places
       S.ink = '#9a9a9a';
       if (this.oldPlace && this.fade < 1) {
@@ -236,7 +240,13 @@
       S.ink = dark ? '#c8c8de' : '#9a9a9a';
       this.place.draw(this.time);
       c.globalAlpha = 1;
-      S.ink = dark ? '#f4f1e8' : '#2a2a2a';
+      if (toon) {
+        // soften the backdrop so the bold actors pop
+        c.fillStyle = dark ? 'rgba(10,8,40,.18)' : 'rgba(255,250,240,.12)';
+        c.fillRect(0, 0, W, H);
+      }
+      S.ink = dark ? '#f4f1e8' : (toon ? '#1b1530' : '#2a2a2a');
+      S.lw = toon ? 4.4 : 3;
 
       const list = this.actors.filter((a) => !a.gone).sort((a, b) => (a.def.sky ? 0 : 1) - (b.def.sky ? 0 : 1) || a.z - b.z);
       // shadows
@@ -249,7 +259,24 @@
       for (const A of list) this.drawActor(A);
       for (const p of this.fx) this.drawParticle(p);
       for (const b of this.bubbles) this.drawBubble(b);
+      if (toon) this.drawFinish(c);
       if (this.flash > 0) { c.fillStyle = `rgba(255,250,220,${this.flash * 0.8})`; c.fillRect(-20, -20, W + 40, H + 40); }
+    }
+
+    // toon finish: vignette + a little paper grain
+    drawFinish(c) {
+      if (!this._vig) {
+        const g = c.createRadialGradient(W / 2, H * 0.45, H * 0.35, W / 2, H * 0.5, W * 0.7);
+        g.addColorStop(0, 'rgba(20,10,50,0)'); g.addColorStop(1, 'rgba(20,10,50,.28)');
+        this._vig = g;
+        const n = document.createElement('canvas'); n.width = n.height = 128;
+        const nc = n.getContext('2d'); const img = nc.createImageData(128, 128);
+        for (let i = 0; i < img.data.length; i += 4) { const v = Math.random() * 255; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 22; }
+        nc.putImageData(img, 0, 0);
+        this._grain = c.createPattern(n, 'repeat');
+      }
+      c.fillStyle = this._vig; c.fillRect(-20, -20, W + 40, H + 40);
+      c.fillStyle = this._grain; c.fillRect(-20, -20, W + 40, H + 40);
     }
 
     drawActor(A) {
@@ -272,6 +299,7 @@
         fill2: A.color ? Color.shade(A.color, -0.2) : (def.fill2 || Color.shade(def.fill || '#dddddd', -0.2)),
         expr: A.expr || Effects.statusExpr(A) || A.mood,
       };
+      S.shade = true;
       def.draw(A, P);
       if (!def.selfFace && (A.alive || def.alwaysFace)) {
         const [fx, fy, fs] = def.face;
@@ -279,6 +307,7 @@
         else { S.circle(fx - fs * 0.32, fy - fs * 0.12, fs * 0.2, '#fff', { lw: 1.5 }); S.circle(fx + fs * 0.32, fy - fs * 0.12, fs * 0.2, '#fff', { lw: 1.5 }); S.face(fx, fy, fs, P.expr); }
       }
       for (const acc of A.acc) Doodle.drawAccessory(acc, A, P);
+      S.shade = false;
       Effects.drawLocal(A, this, P);
       S.unit = 1;
       c.restore();

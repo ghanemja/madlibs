@@ -8,7 +8,7 @@
   window.stage = S; // handy for poking around in the console
 
   const state = { story: null, answers: {}, i: -1, runner: null, blanks: [], bi: 0, busy: false, used: new Set(), mode: 'play' };
-  const prefs = { secret: false, voice: false, sound: true };
+  const prefs = { secret: false, voice: false, sound: true, style: 'toon' };
   try { Object.assign(prefs, JSON.parse(localStorage.getItem('doodlelibs.prefs') || '{}')); } catch (e) { /* private mode */ }
 
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -25,9 +25,13 @@
     $('tSecret').setAttribute('aria-pressed', prefs.secret);
     $('tVoice').setAttribute('aria-pressed', prefs.voice);
     $('tSound').setAttribute('aria-pressed', prefs.sound);
+    Sk.toon = prefs.style !== 'doodle';
+    $('tStyle').textContent = Sk.toon ? '🎨 Toon' : '✏️ Doodle';
+    $('tStyle').setAttribute('aria-pressed', 'true');
     Sfx.on = prefs.sound;
     try { localStorage.setItem('doodlelibs.prefs', JSON.stringify(prefs)); } catch (e) { /* ignore */ }
   }
+  $('tStyle').onclick = () => { prefs.style = Sk.toon ? 'doodle' : 'toon'; syncToggles(); buildMenu(); };
   $('tSecret').onclick = () => { prefs.secret = !prefs.secret; syncToggles(); renderSentence(); };
   $('tVoice').onclick = () => { prefs.voice = !prefs.voice; if (!prefs.voice && window.speechSynthesis) speechSynthesis.cancel(); syncToggles(); };
   $('tSound').onclick = () => { prefs.sound = !prefs.sound; syncToggles(); if (prefs.sound) Sfx.play('ding'); };
@@ -54,14 +58,18 @@
     Sk.begin(ctx, story.title.length);
     const place = PLACES[story.place] || PLACES.park;
     Sk.ink = place.dark ? '#c8c8de' : '#9a9a9a';
+    Sk.lw = Sk.toon ? 2.6 : 3;
+    cv.style.filter = Sk.toon ? 'saturate(1.3) contrast(1.05)' : 'none';
     place.draw(3);
-    Sk.ink = place.dark ? '#f4f1e8' : '#2a2a2a';
+    Sk.ink = place.dark ? '#f4f1e8' : (Sk.toon ? '#1b1530' : '#2a2a2a');
     const fake = (key) => ({ def: THINGS[key], statuses: new Set(), acc: new Set(), color: null });
     const drawAt = (key, x, sc, expr) => {
       const def = THINGS[key];
       ctx.save(); ctx.translate(x, Places.G); ctx.scale(sc, sc); Sk.unit = sc;
       const P = { t: 1, walk: 0, moving: false, fill: def.fill || '#ddd', fill2: def.fill2 || Color.shade(def.fill || '#dddddd', -0.2), expr };
+      Sk.shade = true; Sk.lw = Sk.toon ? 4.4 : 3;
       def.draw(fake(key), P);
+      Sk.shade = false;
       if (!def.selfFace) { const [fx, fy, fs] = def.face; Sk.circle(fx - fs * 0.32, fy - fs * 0.12, fs * 0.2, '#fff', { lw: 1.5 }); Sk.circle(fx + fs * 0.32, fy - fs * 0.12, fs * 0.2, '#fff', { lw: 1.5 }); Sk.face(fx, fy, fs, expr); }
       ctx.restore(); Sk.unit = 1;
     };

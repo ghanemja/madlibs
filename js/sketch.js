@@ -10,6 +10,8 @@
     ink: '#2a2a2a',
     lw: 3,        // line width in px
     unit: 1,      // current transform scale, so lines stay ~lw px wide
+    toon: true,   // bold "cartoon" style: thick ink, cel shading, big eyes
+    shade: false, // cel-shade filled shapes (turned on while drawing actors)
     font: '"Patrick Hand", "Comic Sans MS", "Chalkboard SE", cursive',
 
     begin(ctx, seed) { this.ctx = ctx; this.seed = seed; this.n = 0; this.unit = 1; },
@@ -22,16 +24,42 @@
     },
     j() { return (this.r() - 0.5) * 2 * this.amp / this.unit; },
 
-    _finish(fill, opts) {
+    _finish(fill, opts, bb) {
       const c = this.ctx;
       opts = opts || {};
-      if (fill) { c.fillStyle = fill; c.fill(); }
+      if (fill) {
+        c.fillStyle = fill; c.fill();
+        if (this.toon && this.shade && bb && !opts.flat) this._cel(bb);
+      }
       if (opts.noStroke) return;
       c.strokeStyle = opts.ink || this.ink;
       c.lineWidth = (opts.lw || this.lw) / this.unit;
       c.lineCap = 'round';
       c.lineJoin = 'round';
       c.stroke();
+    },
+
+    // cel shading: a soft highlight top-left and a hard-edged shadow band bottom-right
+    _cel(bb) {
+      const c = this.ctx;
+      const w = bb[2] - bb[0], h = bb[3] - bb[1];
+      if (w < 4 && h < 4) return;
+      c.save();
+      c.clip();
+      const g = c.createLinearGradient(bb[0], bb[1], bb[2], bb[3]);
+      g.addColorStop(0, 'rgba(255,255,255,.35)');
+      g.addColorStop(0.28, 'rgba(255,255,255,0)');
+      g.addColorStop(0.6, 'rgba(30,10,70,0)');
+      g.addColorStop(0.6, 'rgba(30,10,70,.2)');
+      g.addColorStop(1, 'rgba(30,10,70,.3)');
+      c.fillStyle = g;
+      c.fillRect(bb[0] - 2, bb[1] - 2, w + 4, h + 4);
+      c.restore();
+    },
+    _bb(pts) {
+      let a = Infinity, b = Infinity, cc = -Infinity, d = -Infinity;
+      for (const [x, y] of pts) { if (x < a) a = x; if (y < b) b = y; if (x > cc) cc = x; if (y > d) d = y; }
+      return [a, b, cc, d];
     },
 
     line(x1, y1, x2, y2, opts) {
@@ -66,7 +94,7 @@
         const l = p[p.length - 1];
         c.lineTo(l[0], l[1]);
       }
-      this._finish(closed ? fill : null, opts);
+      this._finish(closed ? fill : null, opts, closed && fill ? this._bb(p) : null);
     },
 
     // straight-edged polygon with wobbly edges
@@ -80,7 +108,7 @@
         c.quadraticCurveTo((a[0] + b[0]) / 2 + this.j(), (a[1] + b[1]) / 2 + this.j(), b[0], b[1]);
       }
       c.closePath();
-      this._finish(fill, opts);
+      this._finish(fill, opts, fill ? this._bb(p) : null);
     },
 
     rect(x, y, w, h, fill, opts) { this.poly([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], fill, opts); },
@@ -170,7 +198,13 @@
           eyes((px, py) => { this.circle(px, py, er * 1.9, '#fff', { lw: 1.8 }); this.dot(px, py, er * 0.9, ink); });
           break;
         default:
-          eyes((px, py) => this.dot(px, py, er, ink));
+          if (this.toon && s > 12) {
+            eyes((px, py) => {
+              this.ellipse(px, py, er * 1.9, er * 2.3, '#fff', { lw: 1.6, flat: true });
+              this.dot(px + er * 0.45, py + er * 0.2, er * 1.15, '#1b1530');
+              this.dot(px + er * 0.1, py - er * 0.4, er * 0.45, '#fff');
+            });
+          } else eyes((px, py) => this.dot(px, py, er, ink));
       }
       if (expr === 'angry') {
         this.line(x - ex - er * 2, ey - er * 3.2, x - ex + er * 1.5, ey - er * 1.8, { lw: 2.2 });

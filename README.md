@@ -15,6 +15,11 @@ python3 -m http.server 8000
 
 Then open http://localhost:8000. You can also just double-click `index.html`.
 
+### Hosting on GitHub Pages
+
+It's all static files with relative paths, so Pages works out of the box: **Settings → Pages → Build and deployment → Deploy from a branch → `main` / `(root)`**. Your site will be at `https://<user>.github.io/<repo>/`, and share links work there too.
+
+- **Two looks**: bold *Toon* style (thick ink, cel shading, big eyes) or the original pencil *Doodle* style. Use the 🎨 button to switch.
 - **6 built-in stories**: The Thing in the Park, Blast Off!, Beach Day, Birthday Bash, Monster in the Kitchen, Super Stick Person
 - **Write your own**: type any story with `[noun]`, `[verb]`, `[adjective]`, `[place]`… blanks and it figures out what to animate
 - **Secret mode**: classic Mad Libs, where the sentence stays hidden until you've given your word
