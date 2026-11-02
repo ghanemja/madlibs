@@ -37,7 +37,8 @@
       for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
       const src = a.createBufferSource(); src.buffer = buf;
       const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = freq || 1200; f.Q.value = q || 1;
-      const g = a.createGain(); g.gain.value = vol || 0.3;
+      // fade in over 40 ms so no noise sound starts with a sharp crack
+      const g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol || 0.3, t + Math.min(0.04, dur / 3));
       src.connect(f); f.connect(g); g.connect(this.out()); src.start(t);
     },
     // ── background music: an original, synthesized loop (no samples, no licensing) ──
@@ -96,8 +97,9 @@
         switch (name) {
           case 'boom': this.noise(1.1, 0.7, 500); this.tone('sine', 120, 30, 0.8, 0.5); break;
           case 'boing': this.tone('sine', 220, 660, 0.25, 0.25); this.tone('sine', 660, 300, 0.25, 0.15, 0.2); break;
-          case 'pop': this.tone('square', 600, 1400, 0.08, 0.12); break;
-          case 'poof': this.noise(0.35, 0.25, 2500); break;
+          case 'pop': this.tone('sine', 500, 900, 0.1, 0.1); break;
+          case 'poof': this.tone('sine', 260, 520, 0.18, 0.12); this.tone('sine', 520, 780, 0.12, 0.05, 0.06); break; // soft "bloop" when something appears
+
           case 'whoosh': this.noise(0.6, 0.25, 900, 0, 4); break;
           case 'thud': this.tone('sine', 140, 40, 0.3, 0.5); this.noise(0.2, 0.2, 300); break;
           case 'chomp': this.noise(0.08, 0.35, 1800); this.noise(0.08, 0.35, 1800, 0.18); break;
