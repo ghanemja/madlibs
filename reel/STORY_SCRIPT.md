@@ -6,7 +6,7 @@ Length: about 89 s, 1080×1920. Timestamps come from the real render. Each line 
 | Time | On screen | You say |
 |---|---|---|
 | 0:00 | *A 2026 Turing test, with Mad Libs* / **Could you tell?** / Human or AI? | "Here's a 2026 Turing test, with Mad Libs. If an AI filled in the blanks… could you tell?" |
-| 0:05 | **1 · THE TOY**: the tree dances | "It started as a toy. I built Mad Libs that draw themselves: type a word and a stick figure acts it out." |
+| 0:05 | **1 · THE TOY**: the tree dances | "It started as a toy. I built Mad Libs that draw themselves: type a word and a stick figure does it." |
 | 0:11 | **2 · THE QUESTION**: *Could an AI fake this?* | "I gave it to a friend, and their answers were so weird it made me wonder: would I know if an AI had filled these in?" |
 | 0:17 | **3 · THE DATA**: *Real answers, real people* | "So I found real data. Microsoft Research's Fun Libs: fifty Mad Libs with three hundred answers from real people, all rated for how funny they are." |
 | 0:22 | **4 · THE TEST**: *Your turn!* | "Your turn. Two stories. One person, one AI. Guess before the reveal." |

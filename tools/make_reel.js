@@ -43,7 +43,7 @@ function serve(root) {
   const p = await browser.newPage({ viewport: { width: 700, height: 1000 } });
   p.on('pageerror', (e) => console.error('page error:', e.message));
   await p.goto(page);
-  await p.evaluate(() => document.fonts.ready);
+  await p.evaluate(() => Promise.all(['48px "Patrick Hand"', '700 48px Caveat', '500 48px Caveat', '48px "Caveat Brush"'].map((f) => document.fonts.load(f).catch(() => null))).then(() => document.fonts.ready));
   await p.waitForTimeout(500);
   console.log('recording (this takes as long as the video)…');
   const res = await p.evaluate(async () => {

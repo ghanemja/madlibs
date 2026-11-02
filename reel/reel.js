@@ -29,7 +29,10 @@
   const MUSIC = PARAMS.has('music') ? Number(PARAMS.get('music')) : (CUT === 'story' ? 0.14 : 0.3);
 
   const W = 1080, H = 1920;
-  const FONT = '"Patrick Hand", "Comic Sans MS", cursive';
+  // the story cut is drawn like a sketchbook page: handwriting, wobbly ink, tape, hatching
+  const SKETCH = CUT === 'story';
+  const FONT = SKETCH ? 'Caveat, "Patrick Hand", cursive' : '"Patrick Hand", "Comic Sans MS", cursive';
+  const BRUSH = '"Caveat Brush", Caveat, cursive';
   const INK = '#1b1530', PAPER = '#fffdf6', BG = '#f4efe2', MARK = '#ffe26a', BLUE = '#2a78d6', ORANGE = '#eb6834', PINK = '#e8466b';
   const STAGE = { x: 40, y: 480, w: 1000, h: 563 }; // keeps clear of Instagram's top bar and bottom caption area
 
@@ -47,7 +50,63 @@
   const mark = (label) => timeline.push({ t: +((performance.now() - t0) / 1000).toFixed(1), label });
 
   // ---------------------------------------------------------------- drawing helpers
+  // ---- hand-drawn ink (sketch style). Lines "boil": the wobble re-rolls ~8 times a second, like the cartoon.
+  const boil = () => Math.floor(performance.now() / 125) % 3;
+  function rng(seed) { let s = (Math.abs(Math.floor(seed)) % 2147483646) + 1; return () => ((s = (s * 16807) % 2147483647) / 2147483647); }
+  function inkLine(x1, y1, x2, y2, color, lw, seed, amp) {
+    const R = rng(seed * 31 + boil() * 977), j = () => (R() - 0.5) * 2 * (amp == null ? 3 : amp);
+    const len = Math.hypot(x2 - x1, y2 - y1) || 1, ux = (x2 - x1) / len, uy = (y2 - y1) / len, over = 5 + R() * 6;
+    const ax = x1 - ux * over * R() + j(), ay = y1 - uy * over * R() + j(), bx = x2 + ux * over * R() + j(), by = y2 + uy * over * R() + j();
+    const mx = (ax + bx) / 2 - uy * j() * 2, my = (ay + by) / 2 + ux * j() * 2;
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.quadraticCurveTo(mx, my, bx, by);
+    ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.stroke();
+  }
+  function inkBox(x, y, w, h, fill, stroke, lw, seed) {
+    const R = rng(seed + boil() * 131), j = () => (R() - 0.5) * 6;
+    if (fill) { ctx.beginPath(); ctx.moveTo(x + j(), y + j()); ctx.lineTo(x + w + j(), y + j()); ctx.lineTo(x + w + j(), y + h + j()); ctx.lineTo(x + j(), y + h + j()); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { const l = lw || 5; inkLine(x, y, x + w, y, stroke, l, seed + 1); inkLine(x + w, y, x + w, y + h, stroke, l, seed + 2); inkLine(x + w, y + h, x, y + h, stroke, l, seed + 3); inkLine(x, y + h, x, y, stroke, l, seed + 4); }
+  }
+  function hatch(x, y, w, h, color, seed) {        // diagonal pen hatching instead of a flat fill
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    for (let d = -h; d < w; d += 14) inkLine(x + d, y + h, x + d + h, y, color, 4, seed + d, 1.5);
+    ctx.restore();
+  }
+  function scribble(x, y, w, color, seed) {          // a quick underline swoosh
+    const R = rng(seed + boil() * 53);
+    ctx.beginPath(); ctx.moveTo(x - 6, y + R() * 4);
+    ctx.bezierCurveTo(x + w * 0.3, y + 8 + R() * 4, x + w * 0.7, y - 6 + R() * 4, x + w + 10, y + 2 + R() * 4);
+    ctx.strokeStyle = color; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.stroke();
+  }
+  function loop(cx, cy, rx, ry, color, seed) {       // a loose hand-drawn circle around something
+    const R = rng(seed + boil() * 71), a0 = -2.2 + R() * 0.4;
+    ctx.beginPath();
+    for (let i = 0; i <= 44; i++) { const a = a0 + (i / 40) * Math.PI * 2, k = 1 + (R() - 0.5) * 0.05 + i * 0.002; const px = cx + Math.cos(a) * rx * k, py = cy + Math.sin(a) * ry * k; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+    ctx.strokeStyle = color; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.stroke();
+  }
+  function arrowTo(x1, y1, x2, y2, color, seed) {    // a curvy hand arrow
+    const mx = (x1 + x2) / 2 + (y2 - y1) * 0.25, my = (y1 + y2) / 2 - (x2 - x1) * 0.25;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(mx, my, x2, y2); ctx.strokeStyle = color; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.stroke();
+    const a = Math.atan2(y2 - my, x2 - mx);
+    for (const s of [-0.5, 0.5]) inkLine(x2, y2, x2 - Math.cos(a + s) * 26, y2 - Math.sin(a + s) * 26, color, 5, seed + s * 10, 1);
+  }
+  function tape(x, y, rot) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.fillStyle = 'rgba(236, 222, 170, .82)'; ctx.fillRect(-70, -22, 140, 44);
+    ctx.fillStyle = 'rgba(0,0,0,.05)'; for (let i = -70; i < 70; i += 9) ctx.fillRect(i, -22, 1.5, 44); ctx.restore();
+  }
+  function hand(str, x, y, size, color, o) {          // handwriting, optionally tilted
+    o = o || {};
+    ctx.save(); ctx.translate(x, y); if (o.rot) ctx.rotate(o.rot);
+    ctx.font = `${o.weight || 700} ${size}px ${o.brush ? BRUSH : FONT}`; ctx.textAlign = o.align || 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = color; ctx.fillText(str, 0, 0);
+    const wdt = ctx.measureText(str).width; ctx.restore(); return wdt;
+  }
+
   function rr(x, y, w, h, r, fill, stroke, lw) {
+    if (SKETCH) {                                    // sketchbook: no drop shadows, wobbly ink boxes
+      if (!stroke) return;
+      inkBox(x, y, w, h, fill, stroke, Math.min(lw || 6, 6), x * 7 + y * 3 + w);
+      return;
+    }
     ctx.beginPath();
     ctx.roundRect(x, y, w, h, r);
     if (fill) { ctx.fillStyle = fill; ctx.fill(); }
@@ -57,6 +116,7 @@
     o = o || {};
     ctx.font = `${o.weight || 'bold'} ${size}px ${FONT}`;
     ctx.textAlign = o.align || 'center'; ctx.textBaseline = 'middle';
+    if (SKETCH) { size *= 1.12; o = Object.assign({}, o, { outline: 0, weight: o.weight === '' ? '500' : '700' }); ctx.font = `${o.weight} ${size}px ${FONT}`; }
     if (o.outline) { ctx.lineWidth = o.outline; ctx.strokeStyle = o.outlineColor || '#fff'; ctx.lineJoin = 'round'; ctx.strokeText(str, x, y); }
     ctx.fillStyle = color; ctx.fillText(str, x, y);
   }
@@ -71,26 +131,28 @@
       words.push({ t: part, hl: s.hl, gap: gap || !words.length });
       gap = false;
     }
-    for (let size = ui.phase === 'chap' ? 68 : 58; size >= 30; size -= 2) {
+    const ALIGN_LEFT_TOP = SKETCH && ui.phase === 'chap';
+    for (let size = SKETCH ? (ui.phase === 'chap' ? 76 : 68) : 58; size >= 30; size -= 2) {
       ctx.font = `${size}px ${FONT}`;
       const lh = size * 1.32, lines = [[]];
       let lw = 0;
       const sp = ctx.measureText(' ').width;
       for (const wd of words) {
-        ctx.font = `${wd.hl ? 'bold ' : ''}${size}px ${FONT}`;
+        ctx.font = `${wd.hl ? 'bold ' : SKETCH ? '500 ' : ''}${size}px ${FONT}`;
         const ww = ctx.measureText(wd.t).width;
         const add = (wd.gap && lw ? sp : 0) + ww;
         if (lw + add > w && lines[lines.length - 1].length) { lines.push([]); lw = 0; }
         lines[lines.length - 1].push({ ...wd, ww, lead: wd.gap && lw ? sp : 0 }); lw += lw ? add : ww;
       }
       if (lines.length * lh > h && size > 30) continue;
-      const top = y + (h - lines.length * lh) / 2;
+      const top = ALIGN_LEFT_TOP ? y : y + (h - lines.length * lh) / 2;
       lines.forEach((ln, i) => {
         let cx = x, cy = top + i * lh + lh / 2;
         for (const wd of ln) {
           cx += wd.lead;
-          if (wd.hl) { ctx.fillStyle = MARK; ctx.fillRect(cx - 4, cy - size * 0.05, wd.ww + 8, size * 0.5); }
-          ctx.font = `${wd.hl ? 'bold ' : ''}${size}px ${FONT}`;
+          if (wd.hl && !SKETCH) { ctx.fillStyle = MARK; ctx.fillRect(cx - 4, cy - size * 0.05, wd.ww + 8, size * 0.5); }
+          if (wd.hl && SKETCH) scribble(cx, cy + size * 0.42, wd.ww, PINK, cx + cy);
+          ctx.font = `${wd.hl ? 'bold ' : SKETCH ? '500 ' : ''}${size}px ${FONT}`;
           ctx.fillStyle = INK; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
           ctx.fillText(wd.t, cx, cy);
           cx += wd.ww;
@@ -135,92 +197,93 @@
     });
   }
 
-  // charts drawn into the cartoon window (story cut): few labels, big type
+  // charts drawn into the cartoon window (story cut), in pen
+  const GREY = '#7a7466', SOFT = '#b5ad9c';
   function drawChart(ch) {
-    const { x, y, w, h } = STAGE, el = (performance.now() - ch.at) / 1000, GREY = '#7a7466';
+    const { x, y, w, h } = STAGE, el = (performance.now() - ch.at) / 1000;
     ctx.fillStyle = PAPER; ctx.fillRect(x, y, w, h);
     if (ch.type === 'opt') {
       const rounds = (window.SKILL_OPT || []).filter((e) => e.split === 'tune' && e.verdict !== 'replication');
-      const L = x + 120, R = x + w - 60, T = y + 60, B = y + h - 90, max = 0.5;
+      const L = x + 120, R = x + w - 70, T = y + 70, B = y + h - 100, max = 0.5;
       const X = (i) => L + (R - L) * i / (rounds.length - 1), Y = (v) => B - (B - T) * Math.min(v, max) / max;
-      ctx.strokeStyle = '#e4dfd2'; ctx.lineWidth = 2;
-      for (const t of [0, 0.25, 0.5]) { ctx.beginPath(); ctx.moveTo(L, Y(t)); ctx.lineTo(R, Y(t)); ctx.stroke(); text(Math.round(t * 100) + '%', L - 18, Y(t), 38, GREY, { align: 'right', weight: '' }); }
+      inkLine(L - 20, B, R + 20, B, INK, 4, 11, 2); inkLine(L - 20, B + 10, L - 20, T - 20, INK, 4, 12, 2);
+      hand('50%', L - 34, Y(0.5), 40, GREY, { align: 'right', weight: 500 }); hand('25%', L - 34, Y(0.25), 40, GREY, { align: 'right', weight: 500 }); hand('0', L - 34, B, 40, GREY, { align: 'right', weight: 500 });
       const ppl = rounds[0].people.same_blank;
-      ctx.setLineDash([14, 10]); ctx.strokeStyle = BLUE; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(L, Y(ppl)); ctx.lineTo(R, Y(ppl)); ctx.stroke(); ctx.setLineDash([]);
-      text('people 1%', R, Y(ppl) - 28, 42, BLUE, { align: 'right' });
+      for (let xx = L; xx < R; xx += 46) inkLine(xx, Y(ppl), xx + 24, Y(ppl), BLUE, 5, xx, 1.5);
+      hand('people', R - 210, Y(ppl) - 60, 52, BLUE, { rot: -0.05 }); arrowTo(R - 120, Y(ppl) - 42, R - 70, Y(ppl) - 10, BLUE, 5);
       const shown = Math.min(rounds.length, Math.floor(el / 0.55) + 1);
-      // best-so-far step line
       const best = []; let b = rounds[0].same_blank;
       rounds.forEach((e, i) => { if (i <= 1 || (e.verdict || '').startsWith('kept')) b = e.same_blank; best.push(b); });
-      ctx.strokeStyle = ORANGE; ctx.lineWidth = 7; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(X(0), Y(best[0]));
-      for (let i = 1; i < shown; i++) { ctx.lineTo(X(i), Y(best[i - 1])); ctx.lineTo(X(i), Y(best[i])); }
-      ctx.stroke();
+      for (let i = 1; i < shown; i++) { inkLine(X(i - 1), Y(best[i - 1]), X(i), Y(best[i - 1]), ORANGE, 7, i * 3, 2); if (best[i] !== best[i - 1]) inkLine(X(i), Y(best[i - 1]), X(i), Y(best[i]), ORANGE, 7, i * 5, 2); }
       for (let i = 0; i < shown; i++) {
         const e = rounds[i], kept = i <= 1 || (e.verdict || '').startsWith('kept');
-        ctx.beginPath(); ctx.arc(X(i), Y(e.same_blank), 16, 0, Math.PI * 2);
-        ctx.fillStyle = kept ? ORANGE : PAPER; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = kept ? ORANGE : '#b5ad9c'; ctx.stroke();
+        if (kept) { ctx.beginPath(); ctx.arc(X(i), Y(e.same_blank), 15, 0, 7); ctx.fillStyle = ORANGE; ctx.fill(); }
+        else loop(X(i), Y(e.same_blank), 14, 14, SOFT, i * 17);
       }
-      text(Math.round(best[0] * 100) + '%', X(0) + 4, Y(best[0]) - 42, 48, ORANGE, { align: 'left' });
-      if (shown === rounds.length) text(Math.round(best[shown - 1] * 100) + '%', X(shown - 1), Y(best[shown - 1]) - 46, 56, ORANGE, { align: 'right' });
-      text('each dot = one rule tested', x + 60, B + 52, 36, GREY, { align: 'left', weight: '' });
-      ctx.beginPath(); ctx.arc(R - 330, B + 52, 13, 0, 7); ctx.fillStyle = ORANGE; ctx.fill(); text('kept', R - 305, B + 54, 36, INK, { align: 'left', weight: '' });
-      ctx.beginPath(); ctx.arc(R - 170, B + 52, 13, 0, 7); ctx.lineWidth = 5; ctx.strokeStyle = '#b5ad9c'; ctx.stroke(); text('dropped', R - 145, B + 54, 36, INK, { align: 'left', weight: '' });
+      hand('45%', X(0) + 20, Y(best[0]) - 40, 54, ORANGE, { rot: -0.04 });
+      if (shown === rounds.length) { const ex = X(shown - 1), ey = Y(best[shown - 1]); loop(ex - 40, ey - 125, 70, 44, PINK, 9); hand('14%', ex - 40, ey - 125, 62, ORANGE, { align: 'center' }); arrowTo(ex - 20, ey - 80, ex - 4, ey - 20, PINK, 13); }
+      hand('● kept   ○ tried, didn\'t help', L - 40, B + 56, 42, INK, { weight: 500 });
     } else if (ch.type === 'held') {
       const by = (n) => (window.SKILL_OPT || []).find((e) => e.name === n);
-      const rows = [['No skill', by('test-base'), ORANGE], ['Style guide', by('test-v00'), ORANGE], ['Optimized', by('test-v10'), ORANGE]].filter((r) => r[1]).map(([l, e, c]) => [l, e.same_blank, c]);
-      if (by('test-v10')) rows.push(['People', by('test-v10').people.same_blank, BLUE]);
-      const L = x + 300, maxW = w - 470;
+      const rows = [['no skill', by('test-base'), ORANGE], ['style guide', by('test-v00'), ORANGE], ['optimized', by('test-v10'), ORANGE]].filter((r) => r[1]).map(([l, e, c]) => [l, e.same_blank, c]);
+      if (by('test-v10')) rows.push(['people', by('test-v10').people.same_blank, BLUE]);
+      const L = x + 300, maxW = w - 480;
       rows.forEach(([l, v, c], i) => {
         const k = Math.min(1, Math.max(0, (el - i * 0.5) / 0.7)), yy = y + 92 + i * 126;
-        text(l, L - 24, yy + 4, 52, INK, { align: 'right' });
-        const bw = Math.max(16, maxW * (v / 0.5) * k);
-        rr(L, yy - 40, bw, 80, 16, c, INK, 5);
-        if (k > 0) text(Math.round(v * 100) + '%', L + bw + 18, yy + 4, 58, c === BLUE ? BLUE : INK, { align: 'left' });
+        hand(l, L - 30, yy, 64, c === BLUE ? BLUE : INK, { align: 'right' });
+        if (!k) return;
+        const bw = Math.max(18, maxW * (v / 0.5) * k);
+        hatch(L, yy - 36, bw, 72, c, i * 100);
+        inkBox(L, yy - 36, bw, 72, null, INK, 4, i * 40 + 7);
+        hand(Math.round(v * 100) + '%', L + bw + 22, yy, 66, c === BLUE ? BLUE : INK);
       });
     }
   }
 
-  // story cut: big number cards [{ value, label, color }] and rule chips
+  // story cut: big handwritten numbers with a loop drawn around them
   function drawTiles(tiles) {
-    const n = tiles.length, gap = tiles.some((t) => t.arrow) ? 110 : 40, tw = (1000 - gap * (n - 1)) / n, k = Math.min(1, (performance.now() - ui.barsAt) / 900);
+    const n = tiles.length, k = Math.min(1, (performance.now() - ui.barsAt) / 900);
     tiles.forEach((t, i) => {
-      const tx = 40 + i * (tw + gap), ty = 1330, th = 300;
-      rr(tx + 8, ty + 10, tw, th, 28, 'rgba(0,0,0,.12)');
-      rr(tx, ty, tw, th, 28, PAPER, t.color, 7);
-      const v = Math.round(t.value * 100 * (t.count === false ? 1 : k));
-      text(v + '%', tx + tw / 2, ty + 125, n > 2 ? 120 : 150, t.color, {});
-      text(t.label, tx + tw / 2, ty + 245, 46, INK, {});
-      if (i < n - 1 && t.arrow) text('→', tx + tw + gap / 2, ty + th / 2, 90, INK);
+      const cx = n === 1 ? 540 : 270 + i * 540, cy = 1440 + (i % 2) * 24, rot = i % 2 ? 0.04 : -0.03;
+      const v = Math.round(t.value * 100 * k);
+      hand(v + '%', cx, cy, 190, t.color, { align: 'center', brush: true, rot });
+      if (k >= 1) loop(cx, cy + 6, 190, 115, t.color, i * 29 + 3);
+      hand(t.label, cx, cy + 170, 66, INK, { align: 'center', rot: -rot });
+      if (i < n - 1 && t.arrow) arrowTo(cx + 210, cy - 40, cx + 330, cy - 40, INK, 77);
     });
   }
+  // a handwritten checklist, ticked off one at a time
   function drawChips(chips) {
     chips.forEach((c, i) => {
-      const k = Math.min(1, Math.max(0, ((performance.now() - ui.barsAt) / 1000 - 1.2 - i * 0.9) / 0.3));
-      if (!k) return;
-      ctx.save(); ctx.globalAlpha = k;
-      const y = 1330 + i * 110;
-      rr(140, y, 800, 88, 44, MARK, INK, 5);
-      text(`✓  ${c}`, 540, y + 46, 48, INK);
-      ctx.restore();
+      const k = ((performance.now() - ui.barsAt) / 1000 - 1.2 - i * 0.9);
+      if (k < 0) return;
+      const y = 1380 + i * 108, x = 90 + (i % 2) * 14;
+      inkBox(x, y - 30, 58, 58, null, INK, 4, i * 13 + 5);
+      inkLine(x + 8, y, x + 24, y + 22, PINK, 7, i * 7, 1); inkLine(x + 24, y + 22, x + 64, y - 36, PINK, 7, i * 9, 1);
+      hand(c, x + 96, y, 66, INK);
     });
   }
 
   // ---------------------------------------------------------------- frame
   function frame() {
     ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = 'rgba(0,0,0,.06)';
-    for (let y = 20; y < H; y += 40) for (let x = 20; x < W; x += 40) ctx.fillRect(x, y, 3, 3);
+    if (SKETCH) { ctx.fillStyle = 'rgba(70,110,170,.10)'; for (let y = 96; y < H; y += 64) ctx.fillRect(0, y, W, 2); }   // notebook paper
+    else { ctx.fillStyle = 'rgba(0,0,0,.06)'; for (let y = 20; y < H; y += 40) for (let x = 20; x < W; x += 40) ctx.fillRect(x, y, 3, 3); }
 
-    if (CUT === 'story') {
-      // progress dots for the 9 chapters
-      const n = 9, cur = ui.chapNo || 0;
-      for (let i = 1; i <= n; i++) { ctx.beginPath(); ctx.arc(540 + (i - (n + 1) / 2) * 44, 255, i === cur ? 12 : 8, 0, 7); ctx.fillStyle = i <= cur ? PINK : 'rgba(0,0,0,.15)'; ctx.fill(); }
-    } else text('DOODLE LIBS  ·  MAD LIBS TURING TEST', 540, 262, 34, '#7a7466', { weight: '' });
+    if (SKETCH) { /* no header strip on a sketchbook page */ } else text('DOODLE LIBS  ·  MAD LIBS TURING TEST', 540, 262, 34, '#7a7466', { weight: '' });
 
     // title zone
     if (ui.phase === 'intro') { text('Can you tell who wrote it?', 540, 335, 62, INK); text('HUMAN or AI?', 540, 420, 96, PINK, { outline: 10 }); }
-    else if (ui.phase === 'chap') { text(ui.t1, 540, 330, 48, '#7a7466'); text(ui.t2, 540, 418, ui.t2.length > 24 ? 70 : 88, PINK, { outline: 10 }); }
-    else if (ui.phase === 'question') { text('A 2026 Turing test, with Mad Libs', 540, 330, 60, INK); text('Could you tell?', 540, 425, 100, PINK, { outline: 10 }); }
+    else if (ui.phase === 'chap') {
+      hand(ui.t1, 66, 292, 52, GREY, { weight: 500, rot: -0.02 });
+      const hw = hand(ui.t2, 60, 392, ui.t2.length > 24 ? 84 : 104, INK, { brush: true, rot: -0.015 });
+      scribble(70, 446, Math.min(hw, 940), PINK, ui.chapNo * 13);
+    }
+    else if (ui.phase === 'question') {
+      hand('A 2026 Turing test, with Mad Libs', 66, 285, 62, GREY, { weight: 500, rot: -0.02 });
+      const hw = hand('Could you tell?', 56, 392, 136, INK, { brush: true, rot: -0.03 });
+      scribble(70, 452, hw, PINK, 5);
+    }
     else if (ui.phase === 'story') { text(ui.t1, 540, 335, 58, INK); text(ui.t2, 540, 420, ui.t2.length > 22 ? 70 : 86, PINK, { outline: 10 }); }
     else if (ui.phase === 'lesson') { text(ui.t1, 540, 335, 50, '#7a7466'); text(ui.t2, 540, 420, ui.t2.length > 26 ? 62 : ui.t2.length > 20 ? 72 : 84, PINK, { outline: 10 }); }
     else if (ui.phase === 'play' || ui.phase === 'ask') { text(`ROUND ${ui.round} of ${ui.total || ROUNDS.length}`, 540, 335, 58, INK); text(ui.phase === 'ask' ? 'Comment your guess!' : 'Who filled in the blanks?', 540, 415, 70, PINK, { outline: 8 }); }
@@ -229,22 +292,35 @@
       text(ui.detail, 540, 425, 40, INK, { weight: '' });
     } else if (ui.phase === 'end') { text('How many did you get?', 540, 335, 70, INK); text('Comment your score!', 540, 420, 80, PINK, { outline: 10 }); }
 
-    // the cartoon
+    // the cartoon (sketch style: a slightly crooked photo taped into the notebook)
+    if (SKETCH) {
+      ctx.save(); ctx.translate(STAGE.x + STAGE.w / 2, STAGE.y + STAGE.h / 2); ctx.rotate(-0.012); ctx.translate(-(STAGE.x + STAGE.w / 2), -(STAGE.y + STAGE.h / 2));
+      ctx.fillStyle = 'rgba(0,0,0,.10)'; ctx.fillRect(STAGE.x - 10, STAGE.y - 8, STAGE.w + 26, STAGE.h + 26);
+      ctx.fillStyle = '#fff'; ctx.fillRect(STAGE.x - 16, STAGE.y - 16, STAGE.w + 32, STAGE.h + 32);
+      ctx.drawImage(S.canvas, STAGE.x, STAGE.y, STAGE.w, STAGE.h);
+      if (ui.chart) drawChart(ui.chart);
+      ctx.restore();
+      tape(STAGE.x + 70, STAGE.y - 6, -0.5); tape(STAGE.x + STAGE.w - 60, STAGE.y - 10, 0.45);
+    } else {
     rr(STAGE.x + 10, STAGE.y + 12, STAGE.w, STAGE.h, 28, 'rgba(0,0,0,.18)');
     ctx.save(); ctx.beginPath(); ctx.roundRect(STAGE.x, STAGE.y, STAGE.w, STAGE.h, 28); ctx.clip();
     ctx.drawImage(S.canvas, STAGE.x, STAGE.y, STAGE.w, STAGE.h);
     ctx.restore();
     if (ui.chart) { ctx.save(); ctx.beginPath(); ctx.roundRect(STAGE.x, STAGE.y, STAGE.w, STAGE.h, 28); ctx.clip(); drawChart(ui.chart); ctx.restore(); }
     rr(STAGE.x, STAGE.y, STAGE.w, STAGE.h, 28, null, INK, 7);
+    }
 
     // story card (the opening question keeps the screen simple: no card)
     if (ui.phase === 'chap') {
-      if (ui.segs && ui.segs.length) rich(ui.segs, 60, 1080, 960, 220);
+      if (ui.segs && ui.segs.length) rich(ui.segs, 70, 1095, 940, 230);
     } else if (ui.phase !== 'question') {
     rr(52, 1085, 990, 340, 26, 'rgba(0,0,0,.12)');
     rr(40, 1075, 1000, 340, 26, PAPER, INK, 6);
     rich(ui.segs, 80, 1093, 920, 304);
-    } else text('Human or AI?', 540, 1200, 84, INK);
+    } else {
+      hand('a human?', 120, 1250, 76, BLUE, { rot: -0.05 }); arrowTo(250, 1185, 345, 985, BLUE, 3);
+      hand('an AI?', 740, 1250, 76, ORANGE, { rot: 0.04 }); arrowTo(790, 1185, 690, 985, ORANGE, 4);
+    }
 
     // bottom zone
     if (ui.phase === 'play' || ui.phase === 'ask' || ui.phase === 'reveal') choiceButtons(ui.phase);
@@ -253,7 +329,7 @@
     if (ui.phase === 'lesson' && ui.bars) drawBars(ui.bars);
     if (ui.phase === 'chap' && ui.tiles) drawTiles(ui.tiles);
     if (ui.phase === 'chap' && ui.chips) drawChips(ui.chips);
-    if (ui.phase === 'chap' && ui.foot) text(ui.foot, 540, 1700, 34, '#7a7466', { weight: '' });
+    if (ui.phase === 'chap' && ui.foot) hand(ui.foot, 70, 1330, 40, GREY, { weight: 500 });
     if (ui.phase === 'lesson' && ui.foot) text(ui.foot, 540, 1530, 44, INK);
     if (ui.phase === 'end') {
       rr(90, 1450, 900, 160, 30, BLUE, INK, 6);
@@ -457,7 +533,7 @@
     S.reset('park');
     const me = S.add('me', 'person', { x: 280, dir: 1 }); me.alive = true;
     const tree = S.add('tree', 'tree', { x: 700, scale: 1.2 }); tree.alive = true;
-    chapter(1, '1 · THE TOY', 'Mad Libs that draw themselves', 'Type a word. A stick figure *acts it out*.');
+    chapter(1, '1 · THE TOY', 'Mad Libs that draw themselves', 'Type a word. Watch a stick figure *do it*.');
     await S.wait(1.4);
     await Promise.all([S.act(tree, 'dance'), S.act(me, 'laugh')]);
     await S.wait(1.6);
