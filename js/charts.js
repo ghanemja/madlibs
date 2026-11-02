@@ -113,12 +113,15 @@
     const orig = stories.map((s) => ({ story: s.id, words: s.blanks.map((b) => b.original) }));
     const aiSources = [...new Set(AI.fills.map((f) => f.source))];
     const aiAll = AI.fills.filter((f) => byId[f.story]);
-    const perStory = Math.max(1, Math.round(aiAll.length / stories.length));
+    // compare each AI source with the same number of human fill-ins per story it has
+    const perStory = Math.max(1, Math.round(aiAll.length / stories.length / Math.max(1, aiSources.length)));
+    const bySrc = Object.fromEntries(aiSources.map((s) => [s, wordStats(aiAll.filter((f) => f.source === s))]));
+    const short = (s) => (aiSources.length > 1 ? aiName(s) : 'AI');
     const H = wordStats(human), A = wordStats(aiAll), O = wordStats(orig), M = matchedHuman(perStory, 120);
     const recs = (window.Research && Research.records()) || [];
     const guesses = recs.filter((r) => r.type === 'guess');
     const right = guesses.filter((r) => r.correct).length;
-    const aiName = (s) => (s === 'claude-seed' ? 'AI (Claude seed set)' : s === 'claude-agents' ? 'AI (Claude)' : 'AI: ' + s.replace(/^(anthropic|openai):/, ''));
+    const aiName = (s) => (s === 'claude-seed' ? 'AI (Claude seed set)' : s === 'claude-agents' ? 'AI (Claude agents)' : s === 'anthropic:claude-sonnet-5-5' ? 'AI (Claude Sonnet 5.5)' : 'AI: ' + s.replace(/^(anthropic|openai):/, ''));
 
     // headline numbers
     $('tiles').innerHTML = [
@@ -134,9 +137,9 @@
     const varRows = [
       { label: 'Original text', value: O.distinct, color: C.orig, tip: `Original Wikipedia words: ${pct(O.distinct)} of ${O.n} words are different` },
       { label: 'Humans', value: M.distinct, color: C.human, tip: `Humans: ${pct(M.distinct)} distinct (${perStory} random fill-ins per story, averaged over 120 draws, to match the AI sample size)` },
-      ...aiSources.map((s) => { const st = wordStats(aiAll.filter((f) => f.source === s)); return { label: aiName(s).replace(/^AI \(Claude( seed set)?\)$/, 'AI'), value: st.distinct, color: C.ai, tip: `${aiName(s)}: ${pct(st.distinct)} of ${st.n} words are different` }; }),
+      ...aiSources.map((s) => ({ label: short(s), value: bySrc[s].distinct, color: C.ai, tip: `${aiName(s)}: ${pct(bySrc[s].distinct)} of ${bySrc[s].n} words are different` })),
     ];
-    out.push(card('How varied are the words?', `Share of typed words that are <b>different from each other</b>. Higher means more variety. Humans: <b>${pct(M.distinct)}</b> · AI: <b>${pct(A.distinct)}</b>.`,
+    out.push(card('How varied are the words?', `Share of typed words that are <b>different from each other</b>. Higher means more variety. Humans: <b>${pct(M.distinct)}</b> · ${aiSources.map((s) => `${esc(short(s))}: <b>${pct(bySrc[s].distinct)}</b>`).join(' · ')}.`,
       hbars(varRows, { max: 1, fmt: pct, title: 'Share of distinct words' }),
       table(['group', 'distinct words'], varRows.map((r) => [r.label, pct(r.value)]))));
 
@@ -144,7 +147,7 @@
     const favRows = [
       { label: 'Original text', value: O.top10, color: C.orig, tip: `Original text: its 10 most common words are ${pct(O.top10)} of all its words` },
       { label: 'Humans', value: M.top10, color: C.human, tip: `Humans: top 10 words are ${(100 * M.top10).toFixed(1)}% of all their words (size-matched)` },
-      { label: 'AI', value: A.top10, color: C.ai, tip: `AI: top 10 words are ${(100 * A.top10).toFixed(1)}% of all its words` },
+      ...aiSources.map((s) => ({ label: short(s), value: bySrc[s].top10, color: C.ai, tip: `${aiName(s)}: top 10 words are ${(100 * bySrc[s].top10).toFixed(1)}% of all its words` })),
     ];
     out.push(card('Who leans on favorite words?', 'Share of all words taken up by a group\'s <b>10 most-used words</b>. Higher means more repetitive.',
       hbars(favRows, { fmt: (v) => (100 * v).toFixed(1) + '%', title: 'Top-10 word share' }),

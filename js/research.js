@@ -54,7 +54,7 @@
     return renderTokens(parseTemplate(st.template), ans, (v, tk) => `<span class="w ${mark || ''}" title="${esc(tk.raw)}">${esc(v)}</span>`, () => '____', esc)
       .split('\n').map((l) => `<p>${l}</p>`).join('');
   }
-  const sourceName = (src) => (src === 'claude-seed' ? 'Claude (seed set)' : src === 'claude-agents' ? 'Claude' : src.replace(/^anthropic:/, '').replace(/^openai:/, ''));
+  const sourceName = (src) => (src === 'claude-seed' ? 'Claude (seed set)' : src === 'claude-agents' ? 'Claude, via independent agents' : src === 'anthropic:claude-sonnet-5-5' ? 'Claude Sonnet 5.5' : src.replace(/^anthropic:/, '').replace(/^openai:/, ''));
 
   // ---------------------------------------------------------------- guess game
   const game = { round: 0, right: 0, guessed: 0, item: null, funny: null, recent: [] };
