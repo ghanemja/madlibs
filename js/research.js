@@ -5,7 +5,10 @@
 (function () {
   const $ = (id) => document.getElementById(id);
   const FL = window.FUNLIBS;
-  const AI = window.AI_FILLS || { fills: [] };
+  // the one-pass demo set ("claude-seed") is only used until independently sampled AI answers exist
+  const AI_RAW = window.AI_FILLS || { fills: [] };
+  const AI_LIVE = AI_RAW.fills.filter((f) => f.source !== 'claude-seed');
+  const AI = { ...AI_RAW, fills: AI_LIVE.length ? AI_LIVE : AI_RAW.fills };
   if (!FL || !window.App) { const lab = $('lab'); if (lab) lab.hidden = true; return; }
   const { esc } = App;
   const { parseTemplate, renderTokens, compileCustom } = Director;
@@ -51,7 +54,7 @@
     return renderTokens(parseTemplate(st.template), ans, (v, tk) => `<span class="w ${mark || ''}" title="${esc(tk.raw)}">${esc(v)}</span>`, () => '____', esc)
       .split('\n').map((l) => `<p>${l}</p>`).join('');
   }
-  const sourceName = (src) => (src === 'claude-seed' ? 'Claude (seed set)' : src.replace(/^anthropic:/, '').replace(/^openai:/, ''));
+  const sourceName = (src) => (src === 'claude-seed' ? 'Claude (seed set)' : src === 'claude-agents' ? 'Claude' : src.replace(/^anthropic:/, '').replace(/^openai:/, ''));
 
   // ---------------------------------------------------------------- guess game
   const game = { round: 0, right: 0, guessed: 0, item: null, funny: null, recent: [] };

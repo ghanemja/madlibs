@@ -2,7 +2,11 @@
 // Colors follow the entity everywhere: humans = blue, AI = orange, original text = aqua.
 (function () {
   const $ = (id) => document.getElementById(id);
-  const FL = window.FUNLIBS, AI = window.AI_FILLS || { fills: [] };
+  const FL = window.FUNLIBS;
+  // the one-pass demo set ("claude-seed") is only used until independently sampled AI answers exist
+  const AI_RAW = window.AI_FILLS || { fills: [] };
+  const AI_LIVE = AI_RAW.fills.filter((f) => f.source !== 'claude-seed');
+  const AI = { ...AI_RAW, fills: AI_LIVE.length ? AI_LIVE : AI_RAW.fills };
   if (!FL || !window.App || !$('charts')) return;
   const esc = App.esc;
 
@@ -114,7 +118,7 @@
     const recs = (window.Research && Research.records()) || [];
     const guesses = recs.filter((r) => r.type === 'guess');
     const right = guesses.filter((r) => r.correct).length;
-    const aiName = (s) => (s === 'claude-seed' ? 'AI (Claude seed set)' : 'AI: ' + s.replace(/^(anthropic|openai):/, ''));
+    const aiName = (s) => (s === 'claude-seed' ? 'AI (Claude seed set)' : s === 'claude-agents' ? 'AI (Claude)' : 'AI: ' + s.replace(/^(anthropic|openai):/, ''));
 
     // headline numbers
     $('tiles').innerHTML = [
@@ -130,7 +134,7 @@
     const varRows = [
       { label: 'Original text', value: O.distinct, color: C.orig, tip: `Original Wikipedia words: ${pct(O.distinct)} of ${O.n} words are different` },
       { label: 'Humans', value: M.distinct, color: C.human, tip: `Humans: ${pct(M.distinct)} distinct (${perStory} random fill-ins per story, averaged over 120 draws, to match the AI sample size)` },
-      ...aiSources.map((s) => { const st = wordStats(aiAll.filter((f) => f.source === s)); return { label: aiName(s).replace('AI (Claude seed set)', 'AI'), value: st.distinct, color: C.ai, tip: `${aiName(s)}: ${pct(st.distinct)} of ${st.n} words are different` }; }),
+      ...aiSources.map((s) => { const st = wordStats(aiAll.filter((f) => f.source === s)); return { label: aiName(s).replace(/^AI \(Claude( seed set)?\)$/, 'AI'), value: st.distinct, color: C.ai, tip: `${aiName(s)}: ${pct(st.distinct)} of ${st.n} words are different` }; }),
     ];
     out.push(card('How varied are the words?', `Share of typed words that are <b>different from each other</b>. Higher means more variety. Humans: <b>${pct(M.distinct)}</b> · AI: <b>${pct(A.distinct)}</b>.`,
       hbars(varRows, { max: 1, fmt: pct, title: 'Share of distinct words' }),
@@ -201,7 +205,7 @@
 
     $('charts').innerHTML = out.join('');
     const dp = $('dataPlay'); if (dp) dp.onclick = () => $('labGuess').click();
-    $('dataNote').innerHTML = `Human data: ${esc(FL.source.citation)} ${aiSources.includes('claude-seed') ? '<br>The AI seed set was written in one pass by a Claude model, so it is not an independent sample. Generate more with <code>tools/generate_ai_fills.py</code> for real comparisons.' : ''}`;
+    $('dataNote').innerHTML = `Human data: ${esc(FL.source.citation)} ${aiSources.includes('claude-agents') ? '<br>AI answers: 3 independent Claude agents, each given the same prompt as <code>tools/generate_ai_fills.py</code> and only the blank story templates (never the human answers). Add other models with that script.' : ''}${aiSources.includes('claude-seed') ? '<br>The AI seed set was written in one pass by a Claude model, so it is not an independent sample. Generate more with <code>tools/generate_ai_fills.py</code> for real comparisons.' : ''}`;
   }
 
   // shared hover tooltip

@@ -2,7 +2,8 @@
 // Record reel/index.html to an Instagram-ready vertical video.
 //
 //   npm install playwright && npx playwright install chromium   (once)
-//   node tools/make_reel.js [out.mp4]
+//   node tools/make_reel.js [out.mp4]              Instagram version ("link in bio")
+//   node tools/make_reel.js out.mp4 --linkedin     LinkedIn version (shows the URL instead)
 //
 // Needs ffmpeg on your PATH for the final H.264/AAC encode. Also writes
 // out.timeline.json with when each moment happens, for lining up a voiceover.
@@ -25,9 +26,11 @@ function serve(root) {
 }
 
 (async () => {
-  const out = path.resolve(process.argv[2] || 'doodle-libs-reel.mp4');
+  const args = process.argv.slice(2);
+  const linkedin = args.includes('--linkedin');
+  const out = path.resolve(args.find((a) => !a.startsWith('--')) || 'doodle-libs-reel.mp4');
   const srv = await serve(path.resolve(__dirname, '..'));
-  const page = `http://127.0.0.1:${srv.address().port}/reel/index.html`;
+  const page = `http://127.0.0.1:${srv.address().port}/reel/index.html${linkedin ? '?cta=linkedin' : ''}`;
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   const p = await browser.newPage({ viewport: { width: 700, height: 1000 } });
   p.on('pageerror', (e) => console.error('page error:', e.message));

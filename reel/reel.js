@@ -8,6 +8,8 @@
     { story: 'zombies', source: 'human', filler: 'US', steps: 2 },
   ];
   const URL_TEXT = 'ghanemja.github.io/madlibs';
+  // ?cta=linkedin swaps Instagram's "link in bio" for the URL itself (links live in the post there)
+  const LINKEDIN = new URLSearchParams(location.search).get('cta') === 'linkedin';
 
   const W = 1080, H = 1920;
   const FONT = '"Patrick Hand", "Comic Sans MS", cursive';
@@ -113,6 +115,7 @@
 
     // title zone
     if (ui.phase === 'intro') { text('Can you tell who wrote it?', 540, 335, 62, INK); text('HUMAN or AI?', 540, 420, 96, PINK, { outline: 10 }); }
+    else if (ui.phase === 'story') { text(ui.t1, 540, 335, 58, INK); text(ui.t2, 540, 420, ui.t2.length > 22 ? 70 : 86, PINK, { outline: 10 }); }
     else if (ui.phase === 'play' || ui.phase === 'ask') { text(`ROUND ${ui.round} of ${ROUNDS.length}`, 540, 335, 58, INK); text(ui.phase === 'ask' ? 'Comment your guess!' : 'Who filled in the blanks?', 540, 415, 70, PINK, { outline: 8 }); }
     else if (ui.phase === 'reveal') {
       text(ui.truth === 'human' ? 'It was a HUMAN!' : 'It was the AI!', 540, 345, 92, ui.truth === 'human' ? BLUE : ORANGE, { outline: 10 });
@@ -134,7 +137,12 @@
     // bottom zone
     if (ui.phase === 'play' || ui.phase === 'ask' || ui.phase === 'reveal') choiceButtons(ui.phase);
     if (ui.phase === 'intro') { rr(140, 1460, 800, 140, 30, PINK, INK, 6); text('Play along!', 540, 1532, 76, '#fff'); }
-    if (ui.phase === 'end') { rr(90, 1450, 900, 160, 30, BLUE, INK, 6); text('Play it yourself: link in bio', 540, 1501, 52, '#fff'); text(URL_TEXT, 540, 1565, 44, '#fff', { weight: '' }); }
+    if (ui.phase === 'story' && ui.foot) ui.foot.forEach((l, i) => text(l, 540, 1478 + i * 52, 38, '#7a7466', { weight: '' }));
+    if (ui.phase === 'end') {
+      rr(90, 1450, 900, 160, 30, BLUE, INK, 6);
+      if (LINKEDIN) { text('Try it yourself:', 540, 1497, 46, '#fff'); text(URL_TEXT, 540, 1562, 56, '#fff'); }
+      else { text('Play it yourself: link in bio', 540, 1501, 52, '#fff'); text(URL_TEXT, 540, 1565, 44, '#fff', { weight: '' }); }
+    }
     requestAnimationFrame(frame);
   }
 
@@ -189,9 +197,51 @@
     await S.wait(3);
   }
 
+  // LinkedIn version: how the project happened, before the game
+  async function story() {
+    const beat = (t1, t2, segs, foot) => { ui.phase = 'story'; ui.t1 = t1; ui.t2 = t2; ui.segs = segs; ui.foot = foot || null; mark(`story: ${t1} ${t2}`); };
+    // 1. the toy
+    S.reset('park'); S.crowdLimit = null;
+    const me = S.add('me', 'person', { x: 280, dir: 1 }); me.alive = true;
+    const tree = S.add('tree', 'tree', { x: 700, scale: 1.2, label: 'tree', labelFor: S.time + 99 }); tree.alive = true;
+    beat('It started as a toy:', 'Mad Libs that draw themselves', [{ t: 'Type a word into the blank and a stick figure acts it out. “The tree began to ', hl: false }, { t: 'explode', hl: true }, { t: '.”', hl: false }]);
+    await S.wait(1.6);
+    await S.act(tree, 'explode');
+    await S.wait(2.2);
+    // 2. the friend
+    S.reset('park');
+    const a = S.add('me', 'person', { x: 330, dir: 1, label: 'me', labelFor: S.time + 99 });
+    const f = S.add('friend', 'person', { x: 640, dir: -1, label: 'my friend', labelFor: S.time + 99 });
+    a.alive = f.alive = true; f.hat = 'party';
+    beat('Then I gave it to a friend…', 'Could I tell if an AI wrote it?', [{ t: 'Their answers were so weird that I wondered: if an ', hl: false }, { t: 'AI', hl: true }, { t: ' filled in the blanks instead, would I be able to tell?', hl: false }]);
+    S.bubble(f, 'A type of… SANDWICH!', 2.6);
+    await S.act(f, 'laugh');
+    await S.act(a, 'think');
+    await S.wait(1.4);
+    // 3. the data
+    S.reset('school');
+    const r = S.add('me', 'person', { x: 360, dir: 1 }); r.alive = true;
+    const bk = S.add('book', 'book', { x: 600, scale: 1.4, label: 'Fun Libs', labelFor: S.time + 99 }); bk.alive = true;
+    beat('So I went looking for data:', 'Microsoft Research\'s Fun Libs', [
+      { t: '50 Mad Libs built from Wikipedia, plus ', hl: false }, { t: '300 real human answers', hl: true }, { t: ' from players in the US and India, each rated for funniness by five judges.', hl: false },
+    ], ['Hossain et al., EMNLP 2017 · YodaLib, Garimella et al., COLING 2020']);
+    await S.act(bk, 'float');
+    await S.act(r, 'jump');
+    await S.wait(1.8);
+    // 4. the game
+    S.reset('city');
+    const p = S.add('p', 'person', { x: 300, label: 'human?', dir: 1 });
+    const rb = S.add('r', 'robot', { x: 700, label: 'AI?', dir: -1 });
+    p.alive = rb.alive = true;
+    ui.phase = 'intro'; mark('now you try');
+    ui.segs = [{ t: 'Now you try. Three real stories: some filled in by people, some by an AI. Guess before the reveal!', hl: false }];
+    await Promise.all([S.act(p, 'wave'), S.act(rb, 'wave')]);
+    await S.wait(0.4);
+  }
+
   async function outro() {
     ui.phase = 'end'; mark('outro');
-    ui.segs = [{ t: 'Answers: ', hl: false }, ...ROUNDS.map((r, i) => [{ t: r.source === 'human' ? 'HUMAN' : 'AI', hl: true }, { t: i < ROUNDS.length - 1 ? ', ' : '.', hl: false }]).flat(), { t: ' Real Mad Libs data from a published humor study. Can you beat a coin flip?', hl: false }];
+    ui.segs = [{ t: 'Answers: ', hl: false }, ...ROUNDS.map((r, i) => [{ t: r.source === 'human' ? 'HUMAN' : 'AI', hl: true }, { t: i < ROUNDS.length - 1 ? ', ' : '.', hl: false }]).flat(), { t: LINKEDIN ? ' Stories: Microsoft Research\'s Fun Libs (EMNLP 2017). Human answers: YodaLib (COLING 2020).' : ' Real Mad Libs data from a published humor study. Can you beat a coin flip?', hl: false }];
     S.reset('party'); S.crowdLimit = null;
     const p = S.add('p', 'person', { x: 330 }), r = S.add('r', 'robot', { x: 640, dir: -1 });
     p.alive = r.alive = true;
@@ -202,7 +252,7 @@
 
   async function run() {
     t0 = performance.now(); timeline.length = 0;
-    await intro();
+    if (LINKEDIN) await story(); else await intro();
     for (let i = 0; i < ROUNDS.length; i++) await round(ROUNDS[i], i);
     await outro();
     mark('end');
