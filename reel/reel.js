@@ -182,10 +182,11 @@
     ctx.fillStyle = 'rgba(0,0,0,.06)';
     for (let y = 20; y < H; y += 40) for (let x = 20; x < W; x += 40) ctx.fillRect(x, y, 3, 3);
 
-    text('DOODLE LIBS  ·  MAD LIBS TURING TEST', 540, 262, 34, '#7a7466', { weight: '' });
+    if (ui.phase !== 'question') text('DOODLE LIBS  ·  MAD LIBS TURING TEST', 540, 262, 34, '#7a7466', { weight: '' });
 
     // title zone
     if (ui.phase === 'intro') { text('Can you tell who wrote it?', 540, 335, 62, INK); text('HUMAN or AI?', 540, 420, 96, PINK, { outline: 10 }); }
+    else if (ui.phase === 'question') { text('A 2026 Turing test, with Mad Libs', 540, 330, 60, INK); text('Could you tell?', 540, 425, 100, PINK, { outline: 10 }); }
     else if (ui.phase === 'story') { text(ui.t1, 540, 335, 58, INK); text(ui.t2, 540, 420, ui.t2.length > 22 ? 70 : 86, PINK, { outline: 10 }); }
     else if (ui.phase === 'lesson') { text(ui.t1, 540, 335, 50, '#7a7466'); text(ui.t2, 540, 420, ui.t2.length > 26 ? 62 : ui.t2.length > 20 ? 72 : 84, PINK, { outline: 10 }); }
     else if (ui.phase === 'play' || ui.phase === 'ask') { text(`ROUND ${ui.round} of ${ui.total || ROUNDS.length}`, 540, 335, 58, INK); text(ui.phase === 'ask' ? 'Comment your guess!' : 'Who filled in the blanks?', 540, 415, 70, PINK, { outline: 8 }); }
@@ -202,10 +203,12 @@
     if (ui.chart) { ctx.save(); ctx.beginPath(); ctx.roundRect(STAGE.x, STAGE.y, STAGE.w, STAGE.h, 28); ctx.clip(); drawChart(ui.chart); ctx.restore(); }
     rr(STAGE.x, STAGE.y, STAGE.w, STAGE.h, 28, null, INK, 7);
 
-    // story card
+    // story card (the opening question keeps the screen simple: no card)
+    if (ui.phase !== 'question') {
     rr(52, 1085, 990, 340, 26, 'rgba(0,0,0,.12)');
     rr(40, 1075, 1000, 340, 26, PAPER, INK, 6);
     rich(ui.segs, 80, 1093, 920, 304);
+    } else text('Human or AI?', 540, 1200, 84, INK);
 
     // bottom zone
     if (ui.phase === 'play' || ui.phase === 'ask' || ui.phase === 'reveal') choiceButtons(ui.phase);
@@ -399,10 +402,10 @@
     const st = stats();
     const chapter = (t1, t2, segs, extra) => { ui.phase = 'lesson'; ui.t1 = t1; ui.t2 = t2; ui.segs = segs; ui.bars = (extra && extra.bars) || null; ui.foot = (extra && extra.foot) || null; ui.chart = (extra && extra.chart) ? { type: extra.chart, at: performance.now() } : null; ui.barsAt = performance.now(); mark(`${t1} | ${t2}`); };
     // 0. the question
-    S.reset('city'); S.crowdLimit = null;
-    const q1 = S.add('p', 'person', { x: 300, label: 'human?', dir: 1 }), q2 = S.add('r', 'robot', { x: 700, label: 'AI?', dir: -1 });
+    S.reset('park'); S.crowdLimit = null;
+    const q1 = S.add('p', 'person', { x: 330, dir: 1 }), q2 = S.add('r', 'robot', { x: 670, dir: -1 });
     q1.alive = q2.alive = true;
-    chapter('A 2026 TURING TEST, WITH MAD LIBS', 'Could YOU tell if an AI wrote it?', [{ t: 'Real people and an AI filled in the same Mad Libs. I tried to tell them apart. Then I tried to make the AI ', hl: false }, { t: 'impossible', hl: true }, { t: ' to spot.', hl: false }]);
+    chapter('', '', []); ui.phase = 'question';
     S.bubble(q1, '?', 4.4); setTimeout(() => S.bubble(q2, '?', 4), 500);
     await S.wait(5.2);
     // 1. the toy
