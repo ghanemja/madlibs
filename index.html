@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Doodle Libs</title>
+  <meta name="description" content="Mad Libs that draw themselves: fill in the blanks and watch stick-figure cartoons act out your words.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="top">
+    <button class="logo" id="home" title="Back to stories">Doodle<span>Libs</span></button>
+    <div class="toggles">
+      <button id="tSecret" class="tog" aria-pressed="false" title="Classic Mad Libs: hide the sentence until the word is in">🙈 Secret mode</button>
+      <button id="tVoice" class="tog" aria-pressed="false" title="Read each sentence out loud">🗣️ Narrate</button>
+      <button id="tSound" class="tog" aria-pressed="true" title="Sound effects">🔊 Sound</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- story picker -->
+    <section id="menu" class="view">
+      <div class="hero">
+        <h1>Fill in the blanks.<br><em>Watch them come to life.</em></h1>
+        <p>Pick a story. Make up a word for each blank. The second your word comes in, the stick-figure cartoon acts it out —
+          type <b>“explode”</b> and the tree really explodes.</p>
+      </div>
+      <div class="cards" id="cards"></div>
+    </section>
+
+    <!-- custom story editor -->
+    <section id="editor" class="view" hidden>
+      <div class="paper">
+        <h2>Write your own Doodle Lib</h2>
+        <p class="muted">Write a story and put blanks in square brackets. Every sentence becomes one scene.</p>
+        <input id="cTitle" class="title-in" placeholder="Story title" value="My Story" maxlength="40">
+        <textarea id="cText" rows="8" spellcheck="false"></textarea>
+        <div class="chips" id="chips"></div>
+        <details class="muted small">
+          <summary>How does it know what to animate?</summary>
+          <ul>
+            <li><b>[name]</b> names the main stick person (a second [name] brings in a new person).</li>
+            <li><b>[noun] [animal] [food] [plural noun]</b> make that thing appear.</li>
+            <li><b>[verb]</b> makes the last thing mentioned do it. If the sentence says “everyone” or “together”, everybody does it.</li>
+            <li><b>[adjective] [color]</b> right before a noun describes that noun; otherwise it changes the last thing mentioned.</li>
+            <li><b>[place]</b> changes the scenery. <b>[sound]</b> pops up in a speech bubble or a big comic burst.</li>
+            <li>Want to reuse a word? Name the blank, like <b>[animal:pet]</b>, then write <b>{pet}</b> later.</li>
+          </ul>
+        </details>
+        <div class="row">
+          <button class="btn ghost" id="cBack">← Back</button>
+          <button class="btn" id="cGo">Play it ▶</button>
+        </div>
+        <p id="cErr" class="err" hidden></p>
+      </div>
+    </section>
+
+    <!-- the cartoon -->
+    <section id="play" class="view" hidden>
+      <div class="stage-wrap">
+        <canvas id="stage" aria-label="Cartoon stage"></canvas>
+        <div class="title-tag" id="storyTitle"></div>
+        <button class="ff" id="ff" title="Fast-forward the animation">⏩</button>
+      </div>
+
+      <div class="paper prompt" id="prompt">
+        <div class="steps" id="steps"></div>
+        <p class="sentence" id="sentence"></p>
+        <form id="form" autocomplete="off">
+          <label for="word" id="ask">Give me a VERB</label>
+          <div class="inrow">
+            <input id="word" maxlength="40" enterkeyhint="go" autocapitalize="off">
+            <button type="button" class="btn ghost dice" id="dice" title="Surprise me">🎲</button>
+            <button type="submit" class="btn" id="go">Go!</button>
+          </div>
+          <p class="hint" id="hint"></p>
+        </form>
+        <p class="watching" id="watching" hidden>✏️ drawing…</p>
+      </div>
+
+      <div class="paper end" id="end" hidden>
+        <h2>The End!</h2>
+        <div class="story-text" id="storyText"></div>
+        <div class="row wrap">
+          <button class="btn" id="replay">▶ Watch the whole cartoon</button>
+          <button class="btn ghost" id="share">🔗 Copy share link</button>
+          <button class="btn ghost" id="again">🔁 Same story, new words</button>
+          <button class="btn ghost" id="newStory">📚 Pick another story</button>
+        </div>
+        <p class="toast" id="toast" hidden></p>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/sketch.js"></script>
+  <script src="js/things.js"></script>
+  <script src="js/places.js"></script>
+  <script src="js/sfx.js"></script>
+  <script src="js/stage.js"></script>
+  <script src="js/verbs.js"></script>
+  <script src="js/lexicon.js"></script>
+  <script src="js/director.js"></script>
+  <script src="js/stories.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
