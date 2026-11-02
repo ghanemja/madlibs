@@ -71,7 +71,7 @@
       words.push({ t: part, hl: s.hl, gap: gap || !words.length });
       gap = false;
     }
-    for (let size = 58; size >= 30; size -= 2) {
+    for (let size = ui.phase === 'chap' ? 68 : 58; size >= 30; size -= 2) {
       ctx.font = `${size}px ${FONT}`;
       const lh = size * 1.32, lines = [[]];
       let lw = 0;
@@ -135,45 +135,74 @@
     });
   }
 
-  // charts drawn into the cartoon window (story cut)
+  // charts drawn into the cartoon window (story cut): few labels, big type
   function drawChart(ch) {
-    const { x, y, w, h } = STAGE, el = (performance.now() - ch.at) / 1000;
+    const { x, y, w, h } = STAGE, el = (performance.now() - ch.at) / 1000, GREY = '#7a7466';
     ctx.fillStyle = PAPER; ctx.fillRect(x, y, w, h);
     if (ch.type === 'opt') {
-      const rounds = (window.SKILL_OPT || []).filter((e) => e.split === 'tune');
-      const L = x + 110, R = x + w - 40, T = y + 70, B = y + h - 80, max = 0.5;
-      const X = (i) => L + (R - L) * (i + 0.5) / rounds.length, Y = (v) => B - (B - T) * Math.min(v, max) / max;
-      text('how often the AI gives the same answer to the same blank', x + w / 2, y + 36, 32, '#7a7466', { weight: '' });
+      const rounds = (window.SKILL_OPT || []).filter((e) => e.split === 'tune' && e.verdict !== 'replication');
+      const L = x + 120, R = x + w - 60, T = y + 60, B = y + h - 90, max = 0.5;
+      const X = (i) => L + (R - L) * i / (rounds.length - 1), Y = (v) => B - (B - T) * Math.min(v, max) / max;
       ctx.strokeStyle = '#e4dfd2'; ctx.lineWidth = 2;
-      for (const t of [0, 0.25, 0.5]) { ctx.beginPath(); ctx.moveTo(L, Y(t)); ctx.lineTo(R, Y(t)); ctx.stroke(); text(Math.round(t * 100) + '%', L - 16, Y(t), 28, '#7a7466', { align: 'right', weight: '' }); }
-      const ppl = rounds.length ? rounds[0].people.same_blank : 0.01;
-      ctx.setLineDash([12, 8]); ctx.strokeStyle = BLUE; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(L, Y(ppl)); ctx.lineTo(R, Y(ppl)); ctx.stroke(); ctx.setLineDash([]);
-      text('people', R - 6, Y(ppl) - 22, 30, BLUE, { align: 'right' });
-      const shown = Math.min(rounds.length, Math.floor(el / 0.42) + 1);
-      let best = rounds[0] ? rounds[0].same_blank : 0; ctx.strokeStyle = ORANGE; ctx.lineWidth = 5; ctx.globalAlpha = 0.6; ctx.beginPath();
-      for (let i = 0; i < shown; i++) { const e = rounds[i]; if (i <= 1 || (e.verdict || '').startsWith('kept')) best = e.same_blank; if (i === 0) ctx.moveTo(X(i), Y(best)); else { ctx.lineTo(X(i), ctx.__y || Y(best)); ctx.lineTo(X(i), Y(best)); } ctx.__y = Y(best); }
-      ctx.stroke(); ctx.globalAlpha = 1; ctx.__y = null;
+      for (const t of [0, 0.25, 0.5]) { ctx.beginPath(); ctx.moveTo(L, Y(t)); ctx.lineTo(R, Y(t)); ctx.stroke(); text(Math.round(t * 100) + '%', L - 18, Y(t), 38, GREY, { align: 'right', weight: '' }); }
+      const ppl = rounds[0].people.same_blank;
+      ctx.setLineDash([14, 10]); ctx.strokeStyle = BLUE; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(L, Y(ppl)); ctx.lineTo(R, Y(ppl)); ctx.stroke(); ctx.setLineDash([]);
+      text('people 1%', R, Y(ppl) - 28, 42, BLUE, { align: 'right' });
+      const shown = Math.min(rounds.length, Math.floor(el / 0.55) + 1);
+      // best-so-far step line
+      const best = []; let b = rounds[0].same_blank;
+      rounds.forEach((e, i) => { if (i <= 1 || (e.verdict || '').startsWith('kept')) b = e.same_blank; best.push(b); });
+      ctx.strokeStyle = ORANGE; ctx.lineWidth = 7; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(X(0), Y(best[0]));
+      for (let i = 1; i < shown; i++) { ctx.lineTo(X(i), Y(best[i - 1])); ctx.lineTo(X(i), Y(best[i])); }
+      ctx.stroke();
       for (let i = 0; i < shown; i++) {
-        const e = rounds[i], kept = (e.verdict || '').startsWith('kept'), ref = !e.verdict;
-        ctx.beginPath(); ctx.arc(X(i), Y(e.same_blank), e.verdict === 'replication' ? 9 : 14, 0, Math.PI * 2);
-        ctx.fillStyle = kept ? ORANGE : ref ? '#7a7466' : PAPER; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = kept ? ORANGE : '#7a7466'; ctx.stroke();
-        text(e.name === 'base' ? 'none' : e.name.replace('-replicate', '′'), X(i), B + 34, 24, '#7a7466', { weight: '' });
+        const e = rounds[i], kept = i <= 1 || (e.verdict || '').startsWith('kept');
+        ctx.beginPath(); ctx.arc(X(i), Y(e.same_blank), 16, 0, Math.PI * 2);
+        ctx.fillStyle = kept ? ORANGE : PAPER; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = kept ? ORANGE : '#b5ad9c'; ctx.stroke();
       }
-      text('● kept   ○ rejected', x + w / 2, y + h - 22, 28, INK, { weight: '' });
+      text(Math.round(best[0] * 100) + '%', X(0) + 4, Y(best[0]) - 42, 48, ORANGE, { align: 'left' });
+      if (shown === rounds.length) text(Math.round(best[shown - 1] * 100) + '%', X(shown - 1), Y(best[shown - 1]) - 46, 56, ORANGE, { align: 'right' });
+      text('each dot = one rule tested', x + 60, B + 52, 36, GREY, { align: 'left', weight: '' });
+      ctx.beginPath(); ctx.arc(R - 330, B + 52, 13, 0, 7); ctx.fillStyle = ORANGE; ctx.fill(); text('kept', R - 305, B + 54, 36, INK, { align: 'left', weight: '' });
+      ctx.beginPath(); ctx.arc(R - 170, B + 52, 13, 0, 7); ctx.lineWidth = 5; ctx.strokeStyle = '#b5ad9c'; ctx.stroke(); text('dropped', R - 145, B + 54, 36, INK, { align: 'left', weight: '' });
     } else if (ch.type === 'held') {
       const by = (n) => (window.SKILL_OPT || []).find((e) => e.name === n);
-      const rows = [['No skill', by('test-base'), ORANGE], ['Style skill', by('test-v00'), ORANGE], ['Optimized', by('test-v10'), ORANGE]].filter((r) => r[1]).map(([l, e, c]) => [l, e.same_blank, c]);
+      const rows = [['No skill', by('test-base'), ORANGE], ['Style guide', by('test-v00'), ORANGE], ['Optimized', by('test-v10'), ORANGE]].filter((r) => r[1]).map(([l, e, c]) => [l, e.same_blank, c]);
       if (by('test-v10')) rows.push(['People', by('test-v10').people.same_blank, BLUE]);
-      text('same answer to the same blank, on 10 stories the loop never saw', x + w / 2, y + 40, 30, '#7a7466', { weight: '' });
-      const k = Math.min(1, el / 0.9), L = x + 250, maxW = w - 400;
+      const L = x + 300, maxW = w - 470;
       rows.forEach(([l, v, c], i) => {
-        const yy = y + 110 + i * 102;
-        text(l, L - 20, yy + 4, 40, INK, { align: 'right' });
-        const bw = Math.max(14, maxW * (v / 0.5) * k);
-        rr(L, yy - 32, bw, 64, 14, c, INK, 4);
-        text((v * 100).toFixed(1) + '%', L + bw + 16, yy + 4, 40, INK, { align: 'left' });
+        const k = Math.min(1, Math.max(0, (el - i * 0.5) / 0.7)), yy = y + 92 + i * 126;
+        text(l, L - 24, yy + 4, 52, INK, { align: 'right' });
+        const bw = Math.max(16, maxW * (v / 0.5) * k);
+        rr(L, yy - 40, bw, 80, 16, c, INK, 5);
+        if (k > 0) text(Math.round(v * 100) + '%', L + bw + 18, yy + 4, 58, c === BLUE ? BLUE : INK, { align: 'left' });
       });
     }
+  }
+
+  // story cut: big number cards [{ value, label, color }] and rule chips
+  function drawTiles(tiles) {
+    const n = tiles.length, gap = tiles.some((t) => t.arrow) ? 110 : 40, tw = (1000 - gap * (n - 1)) / n, k = Math.min(1, (performance.now() - ui.barsAt) / 900);
+    tiles.forEach((t, i) => {
+      const tx = 40 + i * (tw + gap), ty = 1330, th = 300;
+      rr(tx + 8, ty + 10, tw, th, 28, 'rgba(0,0,0,.12)');
+      rr(tx, ty, tw, th, 28, PAPER, t.color, 7);
+      const v = Math.round(t.value * 100 * (t.count === false ? 1 : k));
+      text(v + '%', tx + tw / 2, ty + 125, n > 2 ? 120 : 150, t.color, {});
+      text(t.label, tx + tw / 2, ty + 245, 46, INK, {});
+      if (i < n - 1 && t.arrow) text('→', tx + tw + gap / 2, ty + th / 2, 90, INK);
+    });
+  }
+  function drawChips(chips) {
+    chips.forEach((c, i) => {
+      const k = Math.min(1, Math.max(0, ((performance.now() - ui.barsAt) / 1000 - 1.2 - i * 0.9) / 0.3));
+      if (!k) return;
+      ctx.save(); ctx.globalAlpha = k;
+      const y = 1330 + i * 110;
+      rr(140, y, 800, 88, 44, MARK, INK, 5);
+      text(`✓  ${c}`, 540, y + 46, 48, INK);
+      ctx.restore();
+    });
   }
 
   // ---------------------------------------------------------------- frame
@@ -182,10 +211,15 @@
     ctx.fillStyle = 'rgba(0,0,0,.06)';
     for (let y = 20; y < H; y += 40) for (let x = 20; x < W; x += 40) ctx.fillRect(x, y, 3, 3);
 
-    if (ui.phase !== 'question') text('DOODLE LIBS  ·  MAD LIBS TURING TEST', 540, 262, 34, '#7a7466', { weight: '' });
+    if (CUT === 'story') {
+      // progress dots for the 9 chapters
+      const n = 9, cur = ui.chapNo || 0;
+      for (let i = 1; i <= n; i++) { ctx.beginPath(); ctx.arc(540 + (i - (n + 1) / 2) * 44, 255, i === cur ? 12 : 8, 0, 7); ctx.fillStyle = i <= cur ? PINK : 'rgba(0,0,0,.15)'; ctx.fill(); }
+    } else text('DOODLE LIBS  ·  MAD LIBS TURING TEST', 540, 262, 34, '#7a7466', { weight: '' });
 
     // title zone
     if (ui.phase === 'intro') { text('Can you tell who wrote it?', 540, 335, 62, INK); text('HUMAN or AI?', 540, 420, 96, PINK, { outline: 10 }); }
+    else if (ui.phase === 'chap') { text(ui.t1, 540, 330, 48, '#7a7466'); text(ui.t2, 540, 418, ui.t2.length > 24 ? 70 : 88, PINK, { outline: 10 }); }
     else if (ui.phase === 'question') { text('A 2026 Turing test, with Mad Libs', 540, 330, 60, INK); text('Could you tell?', 540, 425, 100, PINK, { outline: 10 }); }
     else if (ui.phase === 'story') { text(ui.t1, 540, 335, 58, INK); text(ui.t2, 540, 420, ui.t2.length > 22 ? 70 : 86, PINK, { outline: 10 }); }
     else if (ui.phase === 'lesson') { text(ui.t1, 540, 335, 50, '#7a7466'); text(ui.t2, 540, 420, ui.t2.length > 26 ? 62 : ui.t2.length > 20 ? 72 : 84, PINK, { outline: 10 }); }
@@ -204,7 +238,9 @@
     rr(STAGE.x, STAGE.y, STAGE.w, STAGE.h, 28, null, INK, 7);
 
     // story card (the opening question keeps the screen simple: no card)
-    if (ui.phase !== 'question') {
+    if (ui.phase === 'chap') {
+      if (ui.segs && ui.segs.length) rich(ui.segs, 60, 1080, 960, 220);
+    } else if (ui.phase !== 'question') {
     rr(52, 1085, 990, 340, 26, 'rgba(0,0,0,.12)');
     rr(40, 1075, 1000, 340, 26, PAPER, INK, 6);
     rich(ui.segs, 80, 1093, 920, 304);
@@ -215,6 +251,9 @@
     if (ui.phase === 'intro') { rr(140, 1460, 800, 140, 30, PINK, INK, 6); text('Play along!', 540, 1532, 76, '#fff'); }
     if (ui.phase === 'story' && ui.foot) ui.foot.forEach((l, i) => text(l, 540, 1478 + i * 52, 38, '#7a7466', { weight: '' }));
     if (ui.phase === 'lesson' && ui.bars) drawBars(ui.bars);
+    if (ui.phase === 'chap' && ui.tiles) drawTiles(ui.tiles);
+    if (ui.phase === 'chap' && ui.chips) drawChips(ui.chips);
+    if (ui.phase === 'chap' && ui.foot) text(ui.foot, 540, 1700, 34, '#7a7466', { weight: '' });
     if (ui.phase === 'lesson' && ui.foot) text(ui.foot, 540, 1530, 44, INK);
     if (ui.phase === 'end') {
       rr(90, 1450, 900, 160, 30, BLUE, INK, 6);
@@ -400,19 +439,25 @@
   // ---------------------------------------------------------------- the full story cut (for a voiceover)
   async function storyCut() {
     const st = stats();
-    const chapter = (t1, t2, segs, extra) => { ui.phase = 'lesson'; ui.t1 = t1; ui.t2 = t2; ui.segs = segs; ui.bars = (extra && extra.bars) || null; ui.foot = (extra && extra.foot) || null; ui.chart = (extra && extra.chart) ? { type: extra.chart, at: performance.now() } : null; ui.barsAt = performance.now(); mark(`${t1} | ${t2}`); };
+    const say = (t, hl) => t.split('*').map((x, i) => ({ t: x, hl: i % 2 === 1 })).filter((x) => x.t);   // *word* = highlighted
+    const chapter = (no, t1, t2, cap, extra) => {
+      extra = extra || {};
+      Object.assign(ui, { phase: no ? 'chap' : 'question', chapNo: no, t1, t2, segs: cap ? say(cap) : [], tiles: extra.tiles || null, chips: extra.chips || null, foot: extra.foot || null, bars: null, barsAt: performance.now() });
+      ui.chart = extra.chart ? { type: extra.chart, at: performance.now() } : null;
+      mark(`${no} ${t1} | ${t2}`);
+    };
     // 0. the question
     S.reset('park'); S.crowdLimit = null;
     const q1 = S.add('p', 'person', { x: 330, dir: 1 }), q2 = S.add('r', 'robot', { x: 670, dir: -1 });
     q1.alive = q2.alive = true;
-    chapter('', '', []); ui.phase = 'question';
+    chapter(0, '', '');
     S.bubble(q1, '?', 4.4); setTimeout(() => S.bubble(q2, '?', 4), 500);
     await S.wait(5.2);
     // 1. the toy
     S.reset('park');
     const me = S.add('me', 'person', { x: 280, dir: 1 }); me.alive = true;
-    const tree = S.add('tree', 'tree', { x: 700, scale: 1.2, label: 'tree', labelFor: S.time + 99 }); tree.alive = true;
-    chapter('1 · THE TOY', 'Mad Libs that draw themselves', [{ t: 'Type a word into the blank and a stick figure acts it out. “The tree began to ', hl: false }, { t: 'dance', hl: true }, { t: '.”', hl: false }]);
+    const tree = S.add('tree', 'tree', { x: 700, scale: 1.2 }); tree.alive = true;
+    chapter(1, '1 · THE TOY', 'Mad Libs that draw themselves', 'Type a word. A stick figure *acts it out*.');
     await S.wait(1.4);
     await Promise.all([S.act(tree, 'dance'), S.act(me, 'laugh')]);
     await S.wait(1.6);
@@ -420,8 +465,8 @@
     S.reset('park');
     const a = S.add('me', 'person', { x: 330, dir: 1, label: 'me', labelFor: S.time + 99 });
     const f = S.add('friend', 'person', { x: 640, dir: -1, label: 'my friend', labelFor: S.time + 99 });
-    a.alive = f.alive = true; f.hat = 'party';
-    chapter('2 · THE QUESTION', 'Would I know if an AI wrote it?', [{ t: 'My friend\'s answers were so weird that I wondered: if an ', hl: false }, { t: 'AI', hl: true }, { t: ' had filled in the blanks, could I tell?', hl: false }]);
+    a.alive = f.alive = true; f.acc.add('party');
+    chapter(2, '2 · THE QUESTION', 'Could an AI fake this?', 'My friend\'s answers were so weird. Would I know if an *AI* wrote them?');
     S.bubble(f, 'nine MAGNETS!', 3);
     await S.act(f, 'laugh');
     await S.act(a, 'think');
@@ -430,52 +475,55 @@
     S.reset('school');
     const rd = S.add('me', 'person', { x: 360, dir: 1 }); rd.alive = true;
     const bk = S.add('book', 'book', { x: 600, scale: 1.4, label: 'Fun Libs', labelFor: S.time + 99 }); bk.alive = true;
-    chapter('3 · THE DATA', 'Microsoft Research\'s Fun Libs', [{ t: '50 Mad Libs built from Wikipedia, plus ', hl: false }, { t: '300 real human answers', hl: true }, { t: ' from players in the US and India, each rated for funniness by judges.', hl: false }],
-      { foot: 'Hossain et al., EMNLP 2017 · YodaLib, Garimella et al., COLING 2020' });
+    chapter(3, '3 · THE DATA', 'Real answers, real people', 'Microsoft Research\'s *Fun Libs*: 50 Mad Libs, *300 human answers*.',
+      { foot: 'Hossain et al., EMNLP 2017 · Garimella et al., COLING 2020' });
     await S.act(bk, 'float');
     await S.wait(2.6);
     // 4. the test
-    S.reset('city');
-    const tp = S.add('p', 'person', { x: 300, label: 'human?', dir: 1 }), tr = S.add('r', 'robot', { x: 700, label: 'AI?', dir: -1 });
+    S.reset('park');
+    const tp = S.add('p', 'person', { x: 330, dir: 1 }), tr = S.add('r', 'robot', { x: 670, dir: -1 });
     tp.alive = tr.alive = true;
-    chapter('4 · THE TEST', 'Your turn: human or AI?', [{ t: 'Two real stories. One was filled in by a person, one by Claude. Guess before the reveal.', hl: false }]);
+    chapter(4, '4 · THE TEST', 'Your turn!', 'One story by a person. One by an AI. *Guess!*');
     await S.wait(2.8);
     ui.chart = null;
     for (let i = 0; i < 2; i++) await round(ROUNDS[i], i, 2);
+    ui.chapNo = 4;
     // 5. what I found
     S.reset('park');
     const said = ['magnets!', 'Idaho!', 'coconut!'];
     const people = said.map((w, i) => { const p = S.add('p' + i, 'person', { x: 110 + i * 130, dir: 1 }); p.alive = true; return p; });
     const bots = [0, 1, 2].map((i) => { const r = S.add('r' + i, 'robot', { x: 590 + i * 130, dir: -1, scale: 0.85 }); r.alive = true; return r; });
-    chapter('5 · WHAT I FOUND', 'People surprise. AI agrees.', [{ t: 'Two people almost never pick the same word for a blank. Ask the AI twice and it often gives the ', hl: false }, { t: 'exact same answer', hl: true }, { t: '.', hl: false }],
-      { bars: [{ label: 'People', value: st.human / Math.max(st.ai, 0.01), color: BLUE, text: pctTxt(st.human) }, { label: 'AI', value: 1, color: ORANGE, text: pctTxt(st.ai) }] });
+    chapter(5, '5 · WHAT I FOUND', 'The AI repeats itself', 'Same blank, asked twice: how often is it the *same word*?',
+      { tiles: [{ value: st.human, label: 'people', color: BLUE }, { value: st.ai, label: 'AI', color: ORANGE }] });
     people.forEach((p, i) => setTimeout(() => S.bubble(p, said[i], 4), i * 250));
     bots.forEach((r, i) => setTimeout(() => S.bubble(r, 'PICKLES!', 4), 900 + i * 250));
     await S.wait(6.2);
     // 6. can a style guide fix it?
     S.reset('school');
     const sg = S.add('r', 'robot', { x: 640, dir: -1 }); sg.alive = true; sg.acc.add('glasses');
-    const mx = Math.max(st.ai, st.hp || 0, 0.01);
-    chapter('6 · CAN A STYLE GUIDE FIX IT?', 'Barely.', [{ t: 'My humanplease skill strips AI tells out of prose. Loaded into Claude, its word choice ', hl: false }, { t: 'barely moved', hl: true }, { t: '.', hl: false }],
-      st.hp != null ? { bars: [{ label: 'AI', value: st.ai / mx, color: ORANGE, text: pctTxt(st.ai) }, { label: '+skill', value: st.hp / mx, color: '#8a5fd0', text: pctTxt(st.hp) }] } : null);
+    chapter(6, '6 · TRY A STYLE GUIDE', 'It barely helped', 'My *humanplease* writing skill, loaded into Claude:',
+      st.hp != null ? { tiles: [{ value: st.ai, label: 'AI', color: ORANGE, arrow: true }, { value: st.hp, label: 'AI + skill', color: '#8a5fd0' }] } : {});
     await S.act(sg, 'think');
     await S.wait(3.6);
     // 7. the optimization loop
     S.reset('park');
-    chapter('7 · SO I OPTIMIZED IT', 'One rule at a time', [{ t: 'Each round: change one rule, run 160 fill-ins, keep it only if the drop is significant. What worked: ', hl: false }, { t: 'be a specific person', hl: true }, { t: ', ', hl: false }, { t: 'ban the stock funny words', hl: true }, { t: ', ', hl: false }, { t: 'randomize the person', hl: true }, { t: '.', hl: false }], { chart: 'opt' });
+    chapter(7, '7 · SO I OPTIMIZED IT', 'One rule at a time', 'Change one rule. Test it. *Keep only what works.*',
+      { chart: 'opt', chips: ['be a specific person', 'ban the stock funny words', 'randomize the person'] });
     await S.wait(9.5);
     // 8. the result
-    chapter('8 · THE RESULT', 'Closer. Not human.', [{ t: 'On 10 stories it never saw, the AI\'s same-answer rate fell from ', hl: false }, { t: '49% to 14%', hl: true }, { t: '. People: 1%.', hl: false }], { chart: 'held' });
+    chapter(8, '8 · THE RESULT', '49% → 14%', 'On stories it never saw. People: *1%*. Closer, *not human*.', { chart: 'held' });
     await S.wait(6.8);
     // 9. the takeaway
     ui.chart = null;
     S.reset('park');
     const ta = S.add('a', 'person', { x: 330, dir: 1 }), tb = S.add('b', 'robot', { x: 650, dir: -1 });
     ta.alive = tb.alive = true;
-    chapter('9 · THE TAKEAWAY', 'Specific beats clever', [{ t: 'AI says the most likely funny thing. People say the thing only', hl: false }, { t: ' they ', hl: true }, { t: 'would think of.', hl: false }]);
+    chapter(9, '9 · THE TAKEAWAY', 'Specific beats clever', 'AI says the *likely* funny thing. People say *their* thing.');
     S.bubble(ta, 'nine MAGNETS!', 3.5);
+    setTimeout(() => S.bubble(tb, 'pickles?', 3), 1200);
     await S.act(ta, 'laugh');
     await S.wait(3.4);
+    ui.chapNo = 10;
   }
 
   async function outro() {
