@@ -15,7 +15,7 @@
 
   // ---------------------------------------------------------------- views
   function show(view) {
-    for (const v of ['menu', 'editor', 'play', 'data']) $(v).hidden = v !== view;
+    for (const v of ['menu', 'labView', 'makerView', 'editor', 'play', 'data']) $(v).hidden = v !== view;
     if (window.App && App.onShow) App.onShow(view);
     document.body.classList.toggle('playing', view === 'play');
     if (view === 'play') requestAnimationFrame(() => S.resize());
@@ -80,7 +80,44 @@
     Sk.ink = '#2a2a2a';
   }
 
+  // the two big "choose your path" pictures, drawn with the cartoon engine
+  function drawPathArt() {
+    const scene = (id, placeKey, actors, extra) => {
+      const cv = $(id); if (!cv) return;
+      const ctx = cv.getContext('2d'); const k = cv.width / Places.W;
+      ctx.setTransform(k, 0, 0, k, 0, 0);
+      Sk.begin(ctx, id.length * 7);
+      const place = PLACES[placeKey];
+      Sk.ink = '#9a9a9a'; Sk.lw = Sk.toon ? 2.6 : 3; place.draw(2);
+      Sk.ink = Sk.toon ? '#1b1530' : '#2a2a2a';
+      cv.style.filter = Sk.toon ? 'saturate(1.3) contrast(1.05)' : 'none';
+      for (const [key, x, sc, expr, color] of actors) {
+        const def = THINGS[key];
+        const A = { def, statuses: new Set(), acc: new Set(), color: color || null };
+        ctx.save(); ctx.translate(x, Places.G - (def.sky ? 230 : 0)); ctx.scale(sc, sc); Sk.unit = sc;
+        Sk.shade = true; Sk.lw = Sk.toon ? 4.4 : 3;
+        def.draw(A, { t: 1, walk: 0, moving: false, fill: color || def.fill || '#ddd', fill2: def.fill2 || Color.shade(color || def.fill || '#dddddd', -0.2), expr });
+        Sk.shade = false;
+        if (!def.selfFace) { const [fx, fy, fs] = def.face; Sk.circle(fx - fs * 0.32, fy - fs * 0.12, fs * 0.2, '#fff', { lw: 1.5 }); Sk.circle(fx + fs * 0.32, fy - fs * 0.12, fs * 0.2, '#fff', { lw: 1.5 }); Sk.face(fx, fy, fs, expr); }
+        ctx.restore(); Sk.unit = 1;
+      }
+      if (extra) extra(ctx);
+    };
+    scene('artLab', 'city', [['person', 300, 1.7, 'happy'], ['robot', 660, 1.55, 'smile']], () => {
+      Sk.text('?', 480, 210, 150, '#e8466b', { weight: 'bold', outline: 10, outlineColor: '#fff' });
+      Sk.text('human', 300, 485, 34, '#2a78d6', { weight: 'bold', outline: 6, outlineColor: '#fff' });
+      Sk.text('AI', 660, 485, 34, '#eb6834', { weight: 'bold', outline: 6, outlineColor: '#fff' });
+    });
+    scene('artMaker', 'park', [['person', 260, 1.6, 'laugh'], ['dragon', 640, 1.35, 'happy'], ['rocket', 860, 0.9, 'surprised']], () => {
+      const pts = []; for (let i = 0; i < 22; i++) { const a = (i / 22) * Math.PI * 2, r = i % 2 ? 70 : 92; pts.push([470 + Math.cos(a) * r * 1.5, 130 + Math.sin(a) * r * 0.7]); }
+      const keep = Sk.ink; Sk.ink = '#2a2a2a'; Sk.poly(pts, '#f6d743', { lw: 4 }); Sk.ink = keep;
+      Sk.text('KA-BOOM!', 470, 134, 54, '#e8463b', { weight: 'bold', outline: 8, outlineColor: '#fff' });
+    });
+    Sk.ink = '#2a2a2a';
+  }
+
   function buildMenu() {
+    drawPathArt();
     const box = $('cards');
     box.innerHTML = '';
     for (const st of STORIES) {
@@ -93,6 +130,9 @@
     }
   }
   $('mkWrite').onclick = openEditor;
+  $('pathLab').onclick = () => show('labView');
+  $('pathMaker').onclick = () => show('makerView');
+  document.querySelectorAll('[data-back]').forEach((b) => { b.onclick = () => show(b.dataset.back); });
   $('mkRandom').onclick = () => startStory(Util.pick(STORIES));
   // redraw thumbnails once the handwriting font arrives
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(buildMenu);
@@ -116,7 +156,7 @@
     };
     $('chips').appendChild(b);
   }
-  $('cBack').onclick = () => show('menu');
+  $('cBack').onclick = () => show('makerView');
   $('cGo').onclick = () => {
     const src = $('cText').value.trim();
     const story = compileCustom(src, $('cTitle').value.trim() || 'My Story');
@@ -345,7 +385,7 @@
 
   $('replay').onclick = () => replay();
   $('again').onclick = () => startStory(state.story);
-  $('newStory').onclick = () => { state.run++; S.reset('park'); show('menu'); };
+  $('newStory').onclick = () => { state.run++; S.reset('park'); show(state.story && state.story.funlib ? 'labView' : 'makerView'); };
 
   // ---------------------------------------------------------------- sharing
   const b64e = (s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');

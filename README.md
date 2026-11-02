@@ -19,6 +19,7 @@ Then open http://localhost:8000. You can also just double-click `index.html`.
 
 It's all static files with relative paths, so Pages works out of the box: **Settings → Pages → Build and deployment → Deploy from a branch → `main` / `(root)`**. Your site will be at `https://<user>.github.io/<repo>/`, and share links work there too.
 
+- **Choose your path**: the home page offers two doors, *Try the Turing Test* (research game) or *Make a Cartoon* (just for fun)
 - **Two looks**: bold *Toon* style (thick ink, cel shading, big eyes) or the original pencil *Doodle* style. Use the 🎨 button to switch.
 - **6 built-in stories**: The Thing in the Park, Blast Off!, Beach Day, Birthday Bash, Monster in the Kitchen, Super Stick Person
 - **Write your own**: type any story with `[noun]`, `[verb]`, `[adjective]`, `[place]`… blanks and it figures out what to animate

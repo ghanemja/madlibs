@@ -167,7 +167,7 @@
   $('gAI').onclick = () => guess('ai');
   $('gNext').onclick = nextRound;
   $('gReplay').onclick = () => { $('gReplay').hidden = true; const it = game.item; App.startStory(toStory(it.st), answersFrom(it.words), { guess: true, onDone: () => { $('gReplay').hidden = false; } }); };
-  $('gQuit').onclick = () => { App.stop(); $('guess').hidden = true; App.show('menu'); };
+  $('gQuit').onclick = () => { App.stop(); $('guess').hidden = true; App.show('labView'); };
   $('gOrig').onclick = () => {
     const it = game.item;
     $('gText').innerHTML = storyText(it.st, it.st.blanks.map((b) => b.original), 'orig');
@@ -179,7 +179,21 @@
       document.querySelectorAll('#gFunny button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
     };
   });
+  if ($('pathLabMeta')) $('pathLabMeta').textContent = `${stories.length} stories · ${stories.reduce((n, s) => n + s.human.length, 0)} real human answers · your score saved`;
   $('labMeta').textContent = `${stories.length} stories · ${stories.reduce((n, s) => n + s.human.length, 0)} human fill-ins · ${AI.fills.length} AI fill-ins`;
   $('gQuit').title = 'Back to the home page';
+  // a live "spoiler" from the data on the Turing Test page
+  (function teaser() {
+    const box = $('teaser'); if (!box) return;
+    const top = (lists) => { const c = new Map(); for (const ws of lists) for (const w of ws) { const k = w.toLowerCase().trim(); c.set(k, (c.get(k) || 0) + 1); } return [...c.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([w]) => w); };
+    const hum = top(stories.flatMap((s) => s.human.map((h) => h.words)));
+    const ai = top(AI.fills.map((f) => f.words));
+    const chip = (w, cls) => `<span class="chip ${cls}">${esc(w)}</span>`;
+    box.innerHTML = `<h4>Spoiler from the data</h4>
+      <p>Humans' favorite words: ${hum.map((w) => chip(w, 'h')).join(' ')}</p>
+      <p>The AI's favorite words: ${ai.map((w) => chip(w, 'a')).join(' ')}</p>
+      <button class="linkbtn" id="teaserData">📊 See all the charts →</button>`;
+    $('teaserData').onclick = () => App.show('data');
+  })();
   updateCount();
 })();

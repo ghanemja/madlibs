@@ -227,5 +227,5 @@
   const openData = () => App.show('data');
   $('openData').onclick = openData;
   $('navData').onclick = openData;
-  $('dataBack').onclick = () => App.show('menu');
+  $('dataBack').onclick = () => App.show('labView');
 })();

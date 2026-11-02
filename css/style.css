@@ -276,3 +276,44 @@ body.playing { --page: 1280px; }
 @media (max-width: 860px) { .split { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 600px) { .top, main { padding-left: 16px; padding-right: 16px; } }
 @media (min-width: 861px) { .split { align-items: stretch; } }
+
+/* ---------------- choose your path ---------------- */
+.paths { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; align-items: stretch; }
+@media (max-width: 860px) { .paths { grid-template-columns: minmax(0, 1fr); gap: 18px; } }
+.path {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px; text-align: left;
+  padding: 16px 18px 20px; cursor: pointer; transition: transform .15s, box-shadow .15s;
+}
+.path.turing { background: #fff7d1; transform: rotate(-.6deg); }
+.path.fun { background: #e9f4ff; transform: rotate(.6deg); }
+.path:hover, .path:focus-visible { transform: rotate(0) translateY(-4px); box-shadow: 8px 10px 0 rgba(0,0,0,.14); outline: none; }
+.path-art { width: 100%; aspect-ratio: 16 / 9; border: 2.5px solid var(--ink); border-radius: 14px; background: #fff; }
+.path-tag { font-size: 17px; background: var(--paper); border: 2px solid var(--ink); border-radius: 10px; padding: 0 10px; margin-top: 4px; }
+.path h2 { margin: 0; font-size: clamp(30px, 3.4vw, 44px); line-height: 1.05; }
+.path p { margin: 0; font-size: 20px; color: #4a463e; }
+.path-meta { color: var(--muted); font-size: 16px; }
+.path-go { margin-top: auto; font-size: 24px; padding: 8px 22px; pointer-events: none; }
+.path.fun .path-go { background: var(--accent2); }
+.path:hover .path-go { transform: translateX(4px); }
+
+/* ---------------- path pages ---------------- */
+.backlink { display: inline-block; margin: 0 0 10px; font-size: 18px; }
+.lab-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 20px; align-items: start; max-width: 1200px; }
+@media (max-width: 860px) { .lab-grid { grid-template-columns: minmax(0, 1fr); } }
+.how h3 { margin: 0 0 6px; font-size: 26px; }
+.steps-how { margin: 0 0 10px; padding-left: 0; list-style: none; counter-reset: s; }
+.steps-how li { counter-increment: s; display: flex; gap: 10px; align-items: baseline; margin: 0 0 10px; font-size: 20px; }
+.steps-how li::before { content: counter(s); flex: none; width: 30px; height: 30px; display: grid; place-items: center; border: 2.5px solid var(--ink); border-radius: 50%; background: var(--marker); font-weight: bold; }
+#makerView .maker { max-width: none; }
+#makerView .maker .cards { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+@media (max-width: 600px) { #makerView .maker .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.lab-grid { max-width: none; align-items: stretch; }
+.steps-how li { display: grid; grid-template-columns: 30px minmax(0, 1fr); align-items: center; }
+.teaser { margin-top: 14px; padding-top: 12px; border-top: 2px dashed var(--line); }
+.teaser h4 { margin: 0 0 6px; font-size: 21px; }
+.teaser p { margin: 0 0 8px; font-size: 18px; }
+.chip { display: inline-block; border: 2px solid var(--ink); border-radius: 10px; padding: 0 8px; margin: 2px 2px; font-size: 17px; background: var(--paper); }
+.chip.h { box-shadow: inset 0 -6px 0 #bcd6f5; }
+.chip.a { box-shadow: inset 0 -6px 0 #f8c7b2; }
+@media (min-width: 861px) { #makerView .maker .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 601px) and (max-width: 860px) { #makerView .maker .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

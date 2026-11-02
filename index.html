@@ -23,15 +23,36 @@
   </header>
 
   <main>
-    <!-- home: two panels -->
+    <!-- home: choose your path -->
     <section id="menu" class="view">
       <div class="hero">
-        <h1>Mad Libs that <em>draw themselves.</em></h1>
-        <p>Every word you type becomes a cartoon. Type <b>“explode”</b> and the tree really explodes.</p>
+        <h1>Choose your <em>path.</em></h1>
+        <p>Mad Libs that draw themselves. Every word becomes a stick-figure cartoon.</p>
       </div>
+      <div class="paths">
+        <button class="path paper turing" id="pathLab">
+          <canvas class="path-art" id="artLab" width="640" height="360" aria-hidden="true"></canvas>
+          <span class="path-tag">🔬 For science</span>
+          <h2>Try the Turing Test</h2>
+          <p>Real people filled in these stories for a humor study. So did an AI. Watch one come to life and guess: <b>human or AI?</b></p>
+          <span class="path-meta" id="pathLabMeta">50 stories · 300 human answers</span>
+          <span class="btn path-go">Start guessing →</span>
+        </button>
+        <button class="path paper fun" id="pathMaker">
+          <canvas class="path-art" id="artMaker" width="640" height="360" aria-hidden="true"></canvas>
+          <span class="path-tag">🎨 For fun</span>
+          <h2>Make a Cartoon</h2>
+          <p>Pick a story or write your own. Make up the words, and watch every one of them get animated. Type <b>“explode”</b>. Trust us.</p>
+          <span class="path-meta">6 stories · write your own · download as video</span>
+          <span class="btn path-go">Let’s make one →</span>
+        </button>
+      </div>
+    </section>
 
-      <div class="split">
-        <!-- left: research game -->
+    <!-- path 1: the Turing test -->
+    <section id="labView" class="view" hidden>
+      <button class="linkbtn backlink" data-back="menu">← Choose a different path</button>
+      <div class="lab-grid">
         <section class="panel paper lab" id="lab">
           <div class="panel-head">
             <span class="panel-icon">🔬</span>
@@ -70,8 +91,23 @@
               Your guesses and answers stay in this browser until you download them.</p>
           </details>
         </section>
+        <aside class="paper how">
+          <h3>How it works</h3>
+          <ol class="steps-how">
+            <li><span><b>Watch</b> a filled-in story play out as a cartoon.</span></li>
+            <li><span><b>Guess</b> who picked the words: a person or an AI.</span></li>
+            <li><span><b>Find out</b> if you were right, and how funny real judges found it.</span></li>
+          </ol>
+          <p class="muted small">The human answers come from a published study where Mechanical Turk players filled in the blanks to be funny,
+            and five judges rated every story. Can you beat a coin flip?</p>
+          <div class="teaser" id="teaser"></div>
+        </aside>
+      </div>
+    </section>
 
-        <!-- right: cartoon maker -->
+    <!-- path 2: make a cartoon -->
+    <section id="makerView" class="view" hidden>
+      <button class="linkbtn backlink" data-back="menu">← Choose a different path</button>
         <section class="panel paper maker">
           <div class="panel-head">
             <span class="panel-icon">🎨</span>
@@ -83,7 +119,6 @@
           </div>
           <div class="cards" id="cards"></div>
         </section>
-      </div>
     </section>
 
     <!-- data -->
