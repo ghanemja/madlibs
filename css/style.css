@@ -7,6 +7,7 @@
   --accent: #e8466b;
   --accent2: #4c9be8;
   --marker: #ffe26a;
+  --page: 1880px;
   --font: "Patrick Hand", "Comic Sans MS", "Chalkboard SE", cursive;
 }
 * { box-sizing: border-box; }
@@ -26,7 +27,7 @@ button { font-family: inherit; font-size: inherit; color: inherit; cursor: point
 
 .top {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 10px 16px; max-width: 1080px; margin: 0 auto; flex-wrap: wrap;
+  padding: 10px 24px; max-width: var(--page); margin: 0 auto; flex-wrap: wrap;
 }
 .logo { background: none; border: 0; font-size: 34px; font-weight: bold; padding: 0; letter-spacing: .5px; transform: rotate(-2deg); }
 .logo span { color: var(--accent); margin-left: 4px; }
@@ -38,7 +39,7 @@ button { font-family: inherit; font-size: inherit; color: inherit; cursor: point
 .tog[aria-pressed="true"] { opacity: 1; background: var(--marker); }
 .tog:hover { transform: rotate(-1deg); }
 
-main { max-width: 1080px; margin: 0 auto; padding: 0 16px 40px; }
+main { max-width: var(--page); margin: 0 auto; padding: 0 24px 40px; }
 
 .hero { text-align: center; margin: 10px auto 26px; max-width: 720px; }
 .hero h1 { font-size: clamp(32px, 6vw, 52px); line-height: 1.05; margin: 8px 0 12px; }
@@ -83,7 +84,7 @@ body.playing { height: 100vh; height: 100dvh; overflow: hidden; display: flex; f
 body.playing .top { padding-top: 6px; padding-bottom: 6px; width: 100%; }
 body.playing main { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; padding-bottom: 12px; }
 #play { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
-.stage-box { flex: 0 1 calc((min(100vw, 1080px) - 32px) * 9 / 16 + 6px); min-height: 140px; container-type: size; display: flex; align-items: center; justify-content: center; }
+.stage-box { flex: 0 1 calc((min(100vw, var(--page)) - 48px) * 9 / 16 + 6px); min-height: 140px; container-type: size; display: flex; align-items: center; justify-content: center; }
 .stage-wrap {
   position: relative; width: min(100cqw, calc(100cqh * 16 / 9)); aspect-ratio: 16 / 9;
   border: 3px solid var(--ink); border-radius: 16px; overflow: hidden; background: #fff; box-shadow: 5px 6px 0 rgba(0,0,0,.12);
@@ -266,3 +267,12 @@ details li { margin-bottom: 3px; }
   .tile b { font-size: 30px; }
   .data-head h2 { font-size: 28px; }
 }
+
+/* use the full width on big screens */
+body.playing { --page: 1280px; }
+.split { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
+@media (min-width: 1400px) { .maker .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 861px) and (max-width: 1399px) { .maker .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 860px) { .split { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) { .top, main { padding-left: 16px; padding-right: 16px; } }
+@media (min-width: 861px) { .split { align-items: stretch; } }
