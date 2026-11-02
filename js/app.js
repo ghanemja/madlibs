@@ -15,7 +15,8 @@
 
   // ---------------------------------------------------------------- views
   function show(view) {
-    for (const v of ['menu', 'editor', 'play']) $(v).hidden = v !== view;
+    for (const v of ['menu', 'editor', 'play', 'data']) $(v).hidden = v !== view;
+    if (window.App && App.onShow) App.onShow(view);
     document.body.classList.toggle('playing', view === 'play');
     if (view === 'play') requestAnimationFrame(() => S.resize());
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -90,17 +91,9 @@
       box.appendChild(b);
       drawThumb(b.querySelector('canvas'), st);
     }
-    const r = document.createElement('button');
-    r.className = 'card special';
-    r.innerHTML = `<div class="big">🎲</div><h3>Surprise me</h3><p>A random story. No peeking.</p>`;
-    r.onclick = () => startStory(Util.pick(STORIES));
-    box.appendChild(r);
-    const c = document.createElement('button');
-    c.className = 'card special';
-    c.innerHTML = `<div class="big">✍️</div><h3>Write your own</h3><p>Type any story with [noun] [verb] blanks and it animates itself.</p>`;
-    c.onclick = openEditor;
-    box.appendChild(c);
   }
+  $('mkWrite').onclick = openEditor;
+  $('mkRandom').onclick = () => startStory(Util.pick(STORIES));
   // redraw thumbnails once the handwriting font arrives
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(buildMenu);
   buildMenu();

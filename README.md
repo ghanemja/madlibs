@@ -34,6 +34,7 @@ A Mad Libs Turing test, built on real humor-research data.
 
 - **Human or AI?**: watch a filled-in story as a cartoon, rate how funny it is, and guess whether a human or an AI chose the words. Half the rounds are human, half AI.
 - **Fill in a research story**: play any of the 50 research stories yourself, then see a table comparing your words with a human player's, an AI's, and the original text.
+- **📊 Data page**: charts comparing human and AI word choices (variety, favorite words, the words judges laughed at, whether the judges' country matters) plus your own Turing-test results. Hover any bar for details; every chart has a table view.
 - **Download my research data**: your guesses, ratings and answers are kept in your browser and download as JSON.
 
 ### The data
@@ -95,6 +96,7 @@ js/stories.js   built-in stories + word-type hints
 js/sfx.js       synthesized sound effects (Web Audio)
 js/app.js       UI flow
 js/research.js  Human or AI? game, research play mode, data export
+js/charts.js    the 📊 Data page (plain SVG charts, no libraries)
 data/           Fun Libs stories + human answers, AI answers
 tools/          dataset converter, AI answer generator, analysis
 ```

@@ -14,6 +14,7 @@
   <header class="top">
     <button class="logo" id="home" title="Back to stories">Doodle<span>Libs</span></button>
     <div class="toggles">
+      <button id="navData" class="tog nav" title="Charts comparing human and AI answers">📊<span> Data</span></button>
       <button id="tStyle" class="tog" aria-pressed="true" title="Switch between bold cartoon style and pencil doodle style">🎨<span> Toon</span></button>
       <button id="tSecret" class="tog" aria-pressed="false" title="Classic Mad Libs: hide the sentence until the word is in">🙈<span> Secret mode</span></button>
       <button id="tVoice" class="tog" aria-pressed="false" title="Read each sentence out loud">🗣️<span> Narrate</span></button>
@@ -22,44 +23,81 @@
   </header>
 
   <main>
-    <!-- story picker -->
+    <!-- home: two panels -->
     <section id="menu" class="view">
       <div class="hero">
-        <h1>Fill in the blanks.<br><em>Watch them come to life.</em></h1>
-        <p>Pick a story. Make up a word for each blank. The second your word comes in, the stick-figure cartoon acts it out —
-          type <b>“explode”</b> and the tree really explodes.</p>
+        <h1>Mad Libs that <em>draw themselves.</em></h1>
+        <p>Every word you type becomes a cartoon. Type <b>“explode”</b> and the tree really explodes.</p>
       </div>
-      <div class="cards" id="cards"></div>
 
-      <section class="paper lab" id="lab">
-        <div class="lab-head">
-          <h2>🔬 Research lab: <em>Human or AI?</em></h2>
-          <span class="muted small" id="labMeta"></span>
+      <div class="split">
+        <!-- left: research game -->
+        <section class="panel paper lab" id="lab">
+          <div class="panel-head">
+            <span class="panel-icon">🔬</span>
+            <div><h2>Mad Libs Turing Test</h2><p class="muted small" id="labMeta"></p></div>
+          </div>
+          <p>Real people filled in these stories for a humor study. So did an AI. Watch one come to life, then guess:
+            <b>human</b> or <b>AI</b>?</p>
+          <button class="btn big-btn" id="labGuess">▶ Play “Human or AI?”</button>
+
+          <div class="scorebox" id="scorebox">
+            <div class="meter"><div class="meter-fill" id="meterFill"></div><div class="meter-chance" title="Guessing at random gets 50%"></div></div>
+            <p class="small" id="labScore">Play a few rounds to see how good you are at spotting the AI.</p>
+          </div>
+
+          <div class="subrow">
+            <span class="muted small">Or fill one in yourself:</span>
+            <span class="pickrow">
+              <select id="labPick" aria-label="Research story to fill in"></select>
+              <button class="btn ghost" id="labPlay">✍️ Fill in</button>
+            </span>
+          </div>
+
+          <div class="row wrap">
+            <button class="btn ghost" id="openData">📊 Explore the data</button>
+          </div>
+          <div class="row wrap small">
+            <button class="linkbtn" id="labExport">⬇️ Download my data (<span id="labCount">0</span>)</button>
+            <button class="linkbtn" id="labClear">🗑️ Clear my data</button>
+          </div>
+          <details class="muted small">
+            <summary>About the data</summary>
+            <p>Stories and human answers come from the <b>YodaLib</b> release (Garimella, Banea, Hossain &amp; Mihalcea, COLING 2020), which reuses the
+              <b>Fun Libs</b> stories of Hossain, Krumm, Vanderwende, Horvitz &amp; Kautz (EMNLP 2017). Each story has six human answers
+              (three from US players, three from India), each rated 0–3 for funniness by five judges.
+              AI answers are in <code>data/ai_fills.json</code>; add more models with <code>tools/generate_ai_fills.py</code>.
+              Your guesses and answers stay in this browser until you download them.</p>
+          </details>
+        </section>
+
+        <!-- right: cartoon maker -->
+        <section class="panel paper maker">
+          <div class="panel-head">
+            <span class="panel-icon">🎨</span>
+            <div><h2>Cartoon Maker</h2><p class="muted small">Pick a story, make up the words, watch it animate.</p></div>
+          </div>
+          <div class="row wrap maker-actions">
+            <button class="btn" id="mkWrite">✍️ Write your own</button>
+            <button class="btn ghost" id="mkRandom">🎲 Surprise me</button>
+          </div>
+          <div class="cards" id="cards"></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- data -->
+    <section id="data" class="view" hidden>
+      <div class="data-head">
+        <div>
+          <h2>📊 The data</h2>
+          <p class="muted">How do humans and AI fill in the same blanks? Hover any bar for details.</p>
         </div>
-        <p>A Mad Libs Turing test. These stories come from published humor research, where real people filled in the blanks
-          and five judges rated how funny each result was. Watch a filled-in story, then guess: did a <b>human</b> pick those words,
-          or an <b>AI</b>?</p>
-        <div class="row wrap">
-          <button class="btn" id="labGuess">🤖 Play “Human or AI?”</button>
-          <span class="pickrow">
-            <button class="btn ghost" id="labPlay">✍️ Fill in</button>
-            <select id="labPick" aria-label="Research story to fill in"></select>
-          </span>
-        </div>
-        <p class="small"><span id="labScore"></span></p>
-        <div class="row wrap small">
-          <button class="linkbtn" id="labExport">⬇️ Download my research data (<span id="labCount">0</span> records)</button>
-          <button class="linkbtn" id="labClear">🗑️ Clear my data</button>
-        </div>
-        <details class="muted small">
-          <summary>About the data</summary>
-          <p>Stories and human answers come from the <b>YodaLib</b> release (Garimella, Banea, Hossain &amp; Mihalcea, COLING 2020), which reuses the
-            <b>Fun Libs</b> stories of Hossain, Krumm, Vanderwende, Horvitz &amp; Kautz (EMNLP 2017). Each story has six human answers
-            (three from US players, three from India), each rated 0–3 for funniness by five judges.
-            AI answers are in <code>data/ai_fills.json</code>; add more models with <code>tools/generate_ai_fills.py</code>.
-            Your guesses and answers stay in this browser until you download them.</p>
-        </details>
-      </section>
+        <button class="btn ghost" id="dataBack">← Back</button>
+      </div>
+      <div class="tiles" id="tiles"></div>
+      <div class="charts" id="charts"></div>
+      <p class="muted small" id="dataNote"></p>
     </section>
 
     <!-- custom story editor -->
@@ -172,5 +210,6 @@
   <script src="data/funlibs.js"></script>
   <script src="data/ai_fills.js"></script>
   <script src="js/research.js"></script>
+  <script src="js/charts.js"></script>
 </body>
 </html>

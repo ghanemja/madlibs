@@ -29,8 +29,14 @@
     $('labCount').textContent = records.length;
     const g = records.filter((r) => r.type === 'guess');
     const right = g.filter((r) => r.correct).length;
-    $('labScore').textContent = g.length ? `Your all-time score: ${right} / ${g.length} right (${Math.round((100 * right) / g.length)}%)` : '';
+    const acc = g.length ? right / g.length : 0;
+    $('meterFill').style.width = (g.length ? Math.max(2, acc * 100) : 0) + '%';
+    $('scorebox').classList.toggle('has', g.length > 0);
+    $('labScore').innerHTML = g.length
+      ? `You've spotted <b>${right} of ${g.length}</b> (${Math.round(acc * 100)}%). ${acc > 0.5 ? 'Better than a coin flip!' : acc === 0.5 ? 'Exactly a coin flip.' : 'The AI is fooling you…'}`
+      : 'Play a few rounds to see how good you are at spotting the AI.';
   }
+  window.Research = { records: () => records.slice() };
 
   // ---------------------------------------------------------------- helpers
   function toStory(st) {
@@ -148,7 +154,7 @@
 
   // ---------------------------------------------------------------- wire up
   const sel = $('labPick');
-  sel.innerHTML = '<option value="">a random story</option>' + stories.map((s) => `<option value="${esc(s.id)}">${esc(s.title)}</option>`).join('');
+  sel.innerHTML = '<option value="">Random story</option>' + stories.map((s) => `<option value="${esc(s.id)}">${esc(s.title)}</option>`).join('');
   $('labGuess').onclick = () => { Sfx.ctx(); startGuess(); };
   $('labPlay').onclick = () => { Sfx.ctx(); startPlay(sel.value); };
   $('labExport').onclick = exportData;
@@ -173,6 +179,7 @@
       document.querySelectorAll('#gFunny button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
     };
   });
-  $('labMeta').textContent = `${stories.length} stories · ${stories.reduce((n, s) => n + s.human.length, 0)} human answers · ${AI.fills.length} AI answers`;
+  $('labMeta').textContent = `${stories.length} stories · ${stories.reduce((n, s) => n + s.human.length, 0)} human fill-ins · ${AI.fills.length} AI fill-ins`;
+  $('gQuit').title = 'Back to the home page';
   updateCount();
 })();
