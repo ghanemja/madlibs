@@ -45,6 +45,7 @@
       this.speedMul = 1;
       this.resize();
       window.addEventListener('resize', () => this.resize());
+      if (window.ResizeObserver) new ResizeObserver(() => this.resize()).observe(canvas);
       let last = performance.now();
       const loop = (now) => {
         const dt = Math.min(0.05, (now - last) / 1000); last = now;
@@ -55,11 +56,16 @@
     }
 
     resize() {
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
-      const r = this.canvas.getBoundingClientRect();
-      const w = Math.max(320, r.width || W);
-      this.canvas.width = Math.round(w * dpr);
-      this.canvas.height = Math.round(w * (H / W) * dpr);
+      let pw;
+      if (this.fixedWidth) pw = this.fixedWidth; // e.g. 1280 while recording a video
+      else {
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        const r = this.canvas.getBoundingClientRect();
+        pw = Math.round(Math.max(320, r.width || W) * dpr);
+      }
+      if (this.canvas.width === pw) return;
+      this.canvas.width = pw;
+      this.canvas.height = Math.round(pw * (H / W));
       this.pxScale = this.canvas.width / W;
     }
 
@@ -260,6 +266,7 @@
       for (const p of this.fx) this.drawParticle(p);
       for (const b of this.bubbles) this.drawBubble(b);
       if (toon) this.drawFinish(c);
+      if (this.caption) this.drawCaption(c, this.caption);
       if (this.flash > 0) { c.fillStyle = `rgba(255,250,220,${this.flash * 0.8})`; c.fillRect(-20, -20, W + 40, H + 40); }
     }
 
@@ -277,6 +284,29 @@
       }
       c.fillStyle = this._vig; c.fillRect(-20, -20, W + 40, H + 40);
       c.fillStyle = this._grain; c.fillRect(-20, -20, W + 40, H + 40);
+    }
+
+    // subtitle banner (burned into downloaded videos)
+    drawCaption(c, text) {
+      const big = this.caption === this.titleCard;
+      c.save();
+      c.font = `bold ${big ? 54 : 25}px ${S.font}`;
+      const maxW = W - 120, words = String(text).split(' '), lines = [];
+      let line = '';
+      for (const w of words) { const t = line ? line + ' ' + w : w; if (c.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t; }
+      if (line) lines.push(line);
+      const lh = big ? 62 : 31, bh = lines.length * lh + 22;
+      const y0 = big ? H / 2 - bh / 2 : H - bh - 14;
+      c.fillStyle = big ? 'rgba(255,253,246,.94)' : 'rgba(20,16,40,.72)';
+      const bw = Math.min(W - 40, Math.max(...lines.map((l) => c.measureText(l).width)) + 50);
+      c.beginPath();
+      if (c.roundRect) c.roundRect(W / 2 - bw / 2, y0, bw, bh, 16); else c.rect(W / 2 - bw / 2, y0, bw, bh);
+      c.fill();
+      if (big) { c.lineWidth = 4; c.strokeStyle = '#1b1530'; c.stroke(); }
+      c.fillStyle = big ? '#1b1530' : '#fff';
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      lines.forEach((l, i) => c.fillText(l, W / 2, y0 + 11 + lh * i + lh / 2));
+      c.restore();
     }
 
     drawActor(A) {

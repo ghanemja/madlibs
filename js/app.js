@@ -16,6 +16,7 @@
   // ---------------------------------------------------------------- views
   function show(view) {
     for (const v of ['menu', 'editor', 'play']) $(v).hidden = v !== view;
+    document.body.classList.toggle('playing', view === 'play');
     if (view === 'play') requestAnimationFrame(() => S.resize());
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -26,7 +27,7 @@
     $('tVoice').setAttribute('aria-pressed', prefs.voice);
     $('tSound').setAttribute('aria-pressed', prefs.sound);
     Sk.toon = prefs.style !== 'doodle';
-    $('tStyle').textContent = Sk.toon ? '🎨 Toon' : '✏️ Doodle';
+    $('tStyle').innerHTML = Sk.toon ? '🎨<span> Toon</span>' : '✏️<span> Doodle</span>';
     $('tStyle').setAttribute('aria-pressed', 'true');
     Sfx.on = prefs.sound;
     try { localStorage.setItem('doodlelibs.prefs', JSON.stringify(prefs)); } catch (e) { /* ignore */ }
@@ -252,30 +253,82 @@
     $('end').hidden = false;
     $('toast').hidden = true;
     $('storyText').innerHTML = storyHtml();
-    $('end').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    $('end').scrollTop = 0;
   }
 
-  async function replay() {
+  async function replay(opts) {
+    opts = opts || {};
     state.mode = 'replay';
     $('end').hidden = true; $('prompt').hidden = false;
     setBusy(true);
-    $('watching').textContent = '🎬 now playing…';
+    $('watching').textContent = opts.record ? '🎬 recording your video… keep this tab open' : '🎬 now playing…';
+    if (opts.record) { S.titleCard = state.story.title; S.caption = S.titleCard; }
     await runSetup(state.story);
+    if (opts.record) { await S.wait(1.2); S.caption = null; }
     for (let i = 0; i < state.story.steps.length; i++) {
       state.i = i; state.blanks = []; renderSteps();
       const step = state.story.steps[i];
       renderSentence();
-      const talk = speak(plainSentence(step));
+      if (opts.record) S.caption = plainSentence(step);
+      const talk = opts.record ? Promise.resolve() : speak(plainSentence(step));
       const r = new StepRunner(S, step, state.answers);
       await r.run();
-      await Promise.all([talk, S.wait(1)]);
+      await Promise.all([talk, S.wait(opts.record ? 1.4 : 1)]);
     }
+    if (opts.record) { S.caption = S.titleCard = 'THE END'; await S.wait(1.6); }
+    S.caption = null;
     $('watching').textContent = '✏️ drawing…';
     state.mode = 'play';
     finish();
   }
 
-  $('replay').onclick = replay;
+  // ---------------------------------------------------------------- downloads
+  const slug = () => (state.story.title || 'cartoon').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'cartoon';
+  function saveBlob(blob, name) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }
+  function toast(msg) { $('toast').textContent = msg; $('toast').hidden = false; }
+
+  $('snap').onclick = () => {
+    $('stage').toBlob((b) => { if (b) saveBlob(b, `${slug()}.png`); toast('Picture saved!'); }, 'image/png');
+  };
+
+  $('video').onclick = async () => {
+    const cv = $('stage');
+    if (!window.MediaRecorder || !cv.captureStream) { toast('Your browser can\'t record video. Try Chrome, Edge or Firefox, or save a picture instead.'); return; }
+    const types = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+    const mime = types.find((t) => MediaRecorder.isTypeSupported(t)) || '';
+    const ext = mime.includes('mp4') ? 'mp4' : 'webm';
+    const speed = S.speedMul;
+    S.speedMul = 1;
+    S.fixedWidth = 1280; S.resize();
+    const stream = cv.captureStream(30);
+    const audio = Sfx.streamTrack();
+    if (audio) stream.addTrack(audio);
+    const chunks = [];
+    let rec;
+    try { rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 5000000 } : undefined); }
+    catch (e) { S.fixedWidth = null; S.resize(); S.speedMul = speed; toast('Couldn\'t start recording in this browser.'); return; }
+    rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    const stopped = new Promise((r) => { rec.onstop = r; });
+    $('recBadge').hidden = false;
+    rec.start(250);
+    try { await replay({ record: true }); } finally {
+      rec.stop();
+      await stopped;
+      stream.getVideoTracks().forEach((t) => t.stop());
+      $('recBadge').hidden = true;
+      S.fixedWidth = null; S.resize(); S.speedMul = speed;
+    }
+    saveBlob(new Blob(chunks, { type: mime || 'video/webm' }), `${slug()}.${ext}`);
+    toast(`Video saved as ${slug()}.${ext}!`);
+  };
+
+  $('replay').onclick = () => replay();
   $('again').onclick = () => startStory(state.story);
   $('newStory').onclick = () => { S.reset('park'); show('menu'); };
 

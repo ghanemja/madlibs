@@ -14,10 +14,10 @@
   <header class="top">
     <button class="logo" id="home" title="Back to stories">Doodle<span>Libs</span></button>
     <div class="toggles">
-      <button id="tStyle" class="tog" aria-pressed="true" title="Switch between bold cartoon style and pencil doodle style">🎨 Toon</button>
-      <button id="tSecret" class="tog" aria-pressed="false" title="Classic Mad Libs: hide the sentence until the word is in">🙈 Secret mode</button>
-      <button id="tVoice" class="tog" aria-pressed="false" title="Read each sentence out loud">🗣️ Narrate</button>
-      <button id="tSound" class="tog" aria-pressed="true" title="Sound effects">🔊 Sound</button>
+      <button id="tStyle" class="tog" aria-pressed="true" title="Switch between bold cartoon style and pencil doodle style">🎨<span> Toon</span></button>
+      <button id="tSecret" class="tog" aria-pressed="false" title="Classic Mad Libs: hide the sentence until the word is in">🙈<span> Secret mode</span></button>
+      <button id="tVoice" class="tog" aria-pressed="false" title="Read each sentence out loud">🗣️<span> Narrate</span></button>
+      <button id="tSound" class="tog" aria-pressed="true" title="Sound effects">🔊<span> Sound</span></button>
     </div>
   </header>
 
@@ -61,10 +61,13 @@
 
     <!-- the cartoon -->
     <section id="play" class="view" hidden>
-      <div class="stage-wrap">
-        <canvas id="stage" aria-label="Cartoon stage"></canvas>
-        <div class="title-tag" id="storyTitle"></div>
-        <button class="ff" id="ff" title="Fast-forward the animation">⏩</button>
+      <div class="stage-box">
+        <div class="stage-wrap">
+          <canvas id="stage" aria-label="Cartoon stage"></canvas>
+          <div class="title-tag" id="storyTitle"></div>
+          <button class="ff" id="ff" title="Fast-forward the animation">⏩</button>
+          <div class="rec" id="recBadge" hidden>● REC</div>
+        </div>
       </div>
 
       <div class="paper prompt" id="prompt">
@@ -87,6 +90,8 @@
         <div class="story-text" id="storyText"></div>
         <div class="row wrap">
           <button class="btn" id="replay">▶ Watch the whole cartoon</button>
+          <button class="btn ghost" id="video">🎬 Download video</button>
+          <button class="btn ghost" id="snap">📸 Save picture</button>
           <button class="btn ghost" id="share">🔗 Copy share link</button>
           <button class="btn ghost" id="again">🔁 Same story, new words</button>
           <button class="btn ghost" id="newStory">📚 Pick another story</button>

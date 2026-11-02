@@ -25,6 +25,7 @@ It's all static files with relative paths, so Pages works out of the box: **Sett
 - **Secret mode**: classic Mad Libs, where the sentence stays hidden until you've given your word
 - **Narrate**: the browser reads each sentence out loud
 - **Replay**: at the end, watch the whole cartoon from the start
+- **Download**: at the end, 🎬 *Download video* records the whole cartoon (1280×720, with sound effects and the story as subtitles), or 📸 *Save picture* saves the current frame as a PNG
 - **Share link**: the story and your words are packed into the URL, so a friend who opens it sees your cartoon
 
 ## How words become cartoons

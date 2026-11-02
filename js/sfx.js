@@ -8,6 +8,17 @@
       if (ac.state === 'suspended') ac.resume();
       return ac;
     },
+    // everything goes through one master node so recordings can tap it
+    out() {
+      if (!this.master) { this.master = ac.createGain(); this.master.connect(ac.destination); }
+      return this.master;
+    },
+    // an audio track of the sound effects, for video recording
+    streamTrack() {
+      const a = this.ctx(); if (!a || !a.createMediaStreamDestination) return null;
+      if (!this.rec) { this.rec = a.createMediaStreamDestination(); this.out().connect(this.rec); }
+      return this.rec.stream.getAudioTracks()[0] || null;
+    },
     tone(type, f0, f1, dur, vol, delay) {
       const a = this.ctx(); if (!a) return;
       const t = a.currentTime + (delay || 0);
@@ -15,7 +26,7 @@
       o.type = type; o.frequency.setValueAtTime(f0, t);
       o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
       g.gain.setValueAtTime(vol || 0.2, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-      o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
+      o.connect(g); g.connect(this.out()); o.start(t); o.stop(t + dur + 0.02);
     },
     noise(dur, vol, freq, delay, q) {
       const a = this.ctx(); if (!a) return;
@@ -27,7 +38,7 @@
       const src = a.createBufferSource(); src.buffer = buf;
       const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = freq || 1200; f.Q.value = q || 1;
       const g = a.createGain(); g.gain.value = vol || 0.3;
-      src.connect(f); f.connect(g); g.connect(a.destination); src.start(t);
+      src.connect(f); f.connect(g); g.connect(this.out()); src.start(t);
     },
     play(name) {
       if (!this.on) return;
