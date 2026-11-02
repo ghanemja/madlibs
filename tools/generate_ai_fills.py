@@ -93,9 +93,13 @@ def make_client(provider):
         client = anthropic.Anthropic()
 
         def ask(model, prompt, temperature):
-            r = client.messages.create(model=model, max_tokens=600, temperature=temperature, system=SYSTEM,
+            # current Claude models don't take sampling parameters (temperature/top_p): each
+            # request is already an independent sample. Thinking counts toward max_tokens.
+            r = client.messages.create(model=model, max_tokens=16000, system=SYSTEM,
                                        messages=[{'role': 'user', 'content': prompt}])
-            return ''.join(b.text for b in r.content if getattr(b, 'type', '') == 'text')
+            if r.stop_reason == 'refusal':
+                raise ValueError('model declined this story')
+            return ''.join(b.text for b in r.content if b.type == 'text')
         return ask
     if provider == 'openai':
         import openai
@@ -146,7 +150,7 @@ def main():
                 continue
             fills['fills'].append({
                 'story': st['id'], 'source': source, 'model': args.model, 'method': 'api',
-                'prompt_version': PROMPT_VERSION, 'temperature': args.temperature,
+                'prompt_version': PROMPT_VERSION, 'temperature': args.temperature if args.provider == 'openai' else None,
                 'created': datetime.date.today().isoformat(), 'words': words,
             })
             added += 1
