@@ -74,3 +74,7 @@ Stories live in `js/stories.js`. Blanks are written `[type:key]`, and `{key}` re
 
 - **New noun**: add a `def('name', { w, h, fill, aliases, draw(A, P) { … } })` to `things.js`
 - **New verb**: add an entry to `VERBS` in `verbs.js` with `dur`, `aliases`, and an `update(A, p, t)` that moves the actor
+
+## License
+
+[MIT](LICENSE)
