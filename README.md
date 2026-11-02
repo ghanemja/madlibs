@@ -43,7 +43,7 @@ A Mad Libs Turing test, built on real humor-research data.
 | | |
 |---|---|
 | Stories + human answers | **YodaLib** (Garimella, Banea, Hossain & Mihalcea, COLING 2020), which reuses the **Fun Libs** stories of Hossain, Krumm, Vanderwende, Horvitz & Kautz (EMNLP 2017). 50 Mad Libs made from Wikipedia paragraphs, each filled in by 3 US and 3 Indian Mechanical Turk players (300 answers), each rated 0–3 for funniness, coherence, incongruity and deviation by 5 judges. Download: [yodalib.crosslingual.humor.zip](https://web.eecs.umich.edu/~mihalcea/downloads/yodalib.crosslingual.humor.zip) |
-| AI answers | `data/ai_fills.json`. Ships with a demo seed set of 100 answers written by a Claude model. Add real, independently sampled answers from any model with `tools/generate_ai_fills.py` |
+| AI answers | `data/ai_fills.json`: 150 from Claude Sonnet 5.5 (API), 150 from independent Claude agents, 150 from Claude Sonnet 5.5 with the [humanplease](https://github.com/ghanemja/humanplease) writing skill loaded; 3 independent samples per story each, never shown the human answers. (A one-pass demo seed set is kept only for the Instagram reel.) Add any model with `tools/generate_ai_fills.py` |
 
 If you use the dataset, please cite both papers.
 
@@ -62,7 +62,18 @@ python3 tools/generate_ai_fills.py --provider openai --model gpt-4o --n 3
 python3 tools/analyze.py --guesses doodle-libs-research-*.json
 ```
 
-`research/REPORT.md` compares groups on variety of words, how often two answers to the same blank match, how much a group leans on favorite words, and overlap with the original text. Early look, using the demo seed set: the AI reused a small comic vocabulary (*sticky, soggy, haunted, hamsters*…), with 30% distinct answers versus 76% for humans at the same sample size. That seed set was written in one pass, so treat it as a demo and regenerate with the script before drawing conclusions.
+`research/REPORT.md` compares groups on variety of words, how often two answers to the same blank match, how much a group leans on favorite words, and overlap with the original text.
+
+**Results so far** (3 samples per story, humans matched to the same size):
+
+| | People | Claude Sonnet 5.5 | + humanplease skill |
+|---|---:|---:|---:|
+| distinct words | 70% | 22% | 30% |
+| two answers to the same blank match | 1.0% | 47.5% | 41.6% |
+| all 3 samples identical | 0.1% | 35% | 28% |
+| top-10 words' share | 3.9% | 18% | 15% |
+
+The writing skill moved word choice a little (same-blank matches down ~6 points, story-bootstrap 95% CI 0.5–11 points) but left it about 40× more repetitive than people. It targets prose style; this tell is about which word gets chosen.
 
 ### Instagram Reel
 

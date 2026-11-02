@@ -11,8 +11,8 @@
   const LESSONS_ON_LINKEDIN = false;
   // lesson 3: what loading the humanplease writing skill did (see research/REPORT.md)
   const LESSON3 = {
-    title: 'Polishing the style isn\'t enough',
-    segs: (st) => [{ t: 'With a human-writing style guide loaded, AI answers matched each other ', hl: false }, { t: pctTxt(st.hp), hl: true }, { t: ' of the time instead of ' + pctTxt(st.ai) + '.', hl: false }],
+    title: 'A style guide helps. A little.',
+    segs: (st) => [{ t: 'With my humanplease writing skill loaded, the AI matched itself ', hl: false }, { t: pctTxt(st.hp), hl: true }, { t: ' of the time instead of ' + pctTxt(st.ai) + '. People: ' + pctTxt(st.human) + '. Better style, same instincts.', hl: false }],
   };
   const TAKEAWAY = {
     title: 'Sound like YOU, not "funny"',
@@ -120,7 +120,7 @@
   function drawBars(rows) {
     const x0 = 300, w = 600, k = Math.min(1, (performance.now() - ui.barsAt) / 700);
     rows.forEach((r, i) => {
-      const y = 1462 + i * 92;
+      const gap = rows.length > 2 ? 72 : 92, y = 1462 + i * gap;
       text(r.label, x0 - 24, y + 4, 44, INK, { align: 'right' });
       rr(x0, y - 30, w, 60, 14, 'rgba(0,0,0,.06)');
       const bw = Math.max(16, w * r.value * k);
@@ -326,9 +326,11 @@
     if (st.hp != null) {
       S.reset('school');
       const r = S.add('r', 'robot', { x: 640, dir: -1 }); r.alive = true; r.acc.add('glasses');
+      const mx = Math.max(st.ai, st.hp, 0.01);
       lesson(LESSON3.title, LESSON3.segs(st), [
-        { label: 'AI', value: st.ai / Math.max(st.ai, st.hp, 0.01), color: ORANGE, text: pctTxt(st.ai) },
-        { label: '+skill', value: st.hp / Math.max(st.ai, st.hp, 0.01), color: '#8a5fd0', text: pctTxt(st.hp) },
+        { label: 'People', value: st.human / mx, color: BLUE, text: pctTxt(st.human) },
+        { label: 'AI', value: st.ai / mx, color: ORANGE, text: pctTxt(st.ai) },
+        { label: '+skill', value: st.hp / mx, color: '#8a5fd0', text: pctTxt(st.hp) },
       ]);
       await S.act(r, 'think');
       await S.wait(2.8);

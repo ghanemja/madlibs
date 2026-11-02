@@ -121,7 +121,7 @@
     const recs = (window.Research && Research.records()) || [];
     const guesses = recs.filter((r) => r.type === 'guess');
     const right = guesses.filter((r) => r.correct).length;
-    const aiName = (s) => (s === 'claude-seed' ? 'AI (Claude seed set)' : s === 'claude-agents' ? 'AI (Claude agents)' : s === 'anthropic:claude-sonnet-5-5' ? 'AI (Claude Sonnet 5.5)' : 'AI: ' + s.replace(/^(anthropic|openai):/, ''));
+    const aiName = (s) => (s === 'claude-seed' ? 'AI (Claude seed set)' : s === 'claude-agents' ? 'AI (Claude agents)' : s === 'anthropic:claude-sonnet-5-5' ? 'AI (Claude Sonnet 5.5)' : s === 'anthropic:claude-sonnet-5-5+humanplease' ? 'AI (Sonnet 5.5 + humanplease)' : 'AI: ' + s.replace(/^(anthropic|openai):/, ''));
 
     // headline numbers
     $('tiles').innerHTML = [
