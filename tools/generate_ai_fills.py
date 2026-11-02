@@ -82,10 +82,16 @@ def story_prompt(st):
 
 
 def parse(text, n):
-    m = re.search(r'\[.*\]', text, re.S)
-    if not m:
+    # take the last JSON array that parses (a reply may show working before the answer)
+    words = None
+    for cand in reversed(re.findall(r'\[[^\[\]]*\]', text, re.S)):
+        try:
+            words = json.loads(cand)
+            break
+        except ValueError:
+            continue
+    if words is None:
         raise ValueError('no JSON array in reply')
-    words = json.loads(m.group(0))
     if not isinstance(words, list) or len(words) != n:
         raise ValueError('expected %d words, got %s' % (n, len(words) if isinstance(words, list) else type(words)))
     return [str(w).strip() for w in words]

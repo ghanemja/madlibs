@@ -100,6 +100,33 @@
     return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.title)}">${g}</svg>`;
   }
 
+  // the skill-optimization loop: every round's same-blank rate, kept vs rejected, best so far
+  function optChart(log) {
+    const rounds = log.filter((e) => e.split === 'tune');
+    const H = 280, padL = 44, padR = 16, padT = 18, padB = 46, plotH = H - padT - padB, plotW = W - padL - padR;
+    const max = 0.5, n = rounds.length;
+    const X = (i) => padL + (plotW * (i + 0.5)) / n, Y = (v) => padT + plotH - (plotH * Math.min(v, max)) / max;
+    let g = '';
+    for (const t of [0, 0.1, 0.2, 0.3, 0.4, 0.5]) g += `<line x1="${padL}" x2="${W - padR}" y1="${Y(t)}" y2="${Y(t)}" stroke="${C.grid}"/><text x="${padL - 6}" y="${Y(t)}" text-anchor="end" dominant-baseline="central" class="t-ax">${pct(t)}</text>`;
+    const ppl = rounds[0].people.same_blank;
+    g += `<line x1="${padL}" x2="${W - padR}" y1="${Y(ppl)}" y2="${Y(ppl)}" stroke="${C.human}" stroke-width="2" stroke-dasharray="6 4"/><text x="${W - padR}" y="${Y(ppl) - 7}" text-anchor="end" class="t-ax" fill="${C.human}">people ${(ppl * 100).toFixed(1)}%</text>`;
+    // best-so-far step line
+    let best = rounds[0].same_blank, pts = [];
+    rounds.forEach((e, i) => { if (e.verdict && e.verdict.startsWith('kept')) best = e.same_blank; if (i <= 1) best = e.same_blank; pts.push([X(i), Y(best)]); });
+    g += `<path d="${pts.map((p, i) => (i ? `H${p[0]}V${p[1]}` : `M${p[0]},${p[1]}`)).join('')}" fill="none" stroke="${C.ai}" stroke-width="2" opacity=".55"/>`;
+    rounds.forEach((e, i) => {
+      const kept = e.verdict && e.verdict.startsWith('kept'), ref = !e.verdict, rep = e.verdict === 'replication';
+      const fill = kept ? C.ai : ref ? C.muted : '#fffdf6', stroke = kept ? C.ai : C.muted;
+      const ci = e.drop_ci ? ` Drop vs ${e.parent}: ${(e.drop_ci[0] * 100).toFixed(1)} to ${(e.drop_ci[1] * 100).toFixed(1)} points.` : '';
+      const tip = `${e.name}: ${e.note}. Same word ${(e.same_blank * 100).toFixed(1)}% of the time.${ci} ${e.verdict ? '→ ' + e.verdict : ''}`;
+      g += `<g class="hit" data-tip="${esc(tip)}"><rect x="${X(i) - plotW / n / 2}" y="${padT}" width="${plotW / n}" height="${plotH}" fill="transparent"/>`
+        + `<circle cx="${X(i)}" cy="${Y(e.same_blank)}" r="${rep ? 5 : 7}" fill="${fill}" stroke="${stroke}" stroke-width="2.5"/></g>`
+        + `<text x="${X(i)}" y="${H - padB + 16}" text-anchor="middle" class="t-ax">${esc(e.name.replace('-replicate', '′').replace('base', 'none'))}</text>`;
+    });
+    g += `<text x="${padL + plotW / 2}" y="${H - 8}" text-anchor="middle" class="t-ax">round (filled = kept, hollow = rejected)</text>`;
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Skill optimization rounds">${g}</svg>`;
+  }
+
   const legend = (items) => `<div class="legend">${items.map(([name, color]) => `<span><i style="background:${color}"></i>${esc(name)}</span>`).join('')}</div>`;
   const table = (head, rows) => `<details class="tview"><summary>Show as table</summary><table><thead><tr>${head.map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></details>`;
   const card = (title, sub, body, extra) => `<article class="chart paper"><h3>${esc(title)}</h3><p class="muted small">${sub}</p>${body}${extra || ''}</article>`;
@@ -121,7 +148,7 @@
     const recs = (window.Research && Research.records()) || [];
     const guesses = recs.filter((r) => r.type === 'guess');
     const right = guesses.filter((r) => r.correct).length;
-    const aiName = (s) => (s === 'claude-seed' ? 'AI (Claude seed set)' : s === 'claude-agents' ? 'AI (Claude agents)' : s === 'anthropic:claude-sonnet-5-5' ? 'AI (Claude Sonnet 5.5)' : s === 'anthropic:claude-sonnet-5-5+humanplease' ? 'AI (Sonnet 5.5 + humanplease)' : 'AI: ' + s.replace(/^(anthropic|openai):/, ''));
+    const aiName = (s) => (s === 'claude-seed' ? 'AI (Claude seed set)' : s === 'claude-agents' ? 'AI (Claude agents)' : s === 'anthropic:claude-sonnet-5-5' ? 'AI (Claude Sonnet 5.5)' : s === 'anthropic:claude-sonnet-5-5+humanplease' ? 'AI (Sonnet 5.5 + humanplease)' : s === 'anthropic:claude-sonnet-5-5+optimized' ? 'AI (Sonnet 5.5 + optimized)' : 'AI: ' + s.replace(/^(anthropic|openai):/, ''));
 
     // headline numbers
     $('tiles').innerHTML = [
@@ -204,6 +231,26 @@
         table(['guess', 'running score'], pts.map((p, i) => [i + 1, pct(p.y)]))));
     } else {
       out.push(`<article class="chart paper empty"><h3>Your Turing test</h3><p class="muted">Play a few rounds of “Human or AI?” and your results show up here: how often you spot the AI, and whether you get better.</p><button class="btn" id="dataPlay">▶ Play now</button></article>`);
+    }
+
+    // the optimization loop (research/OPTIMIZATION.md)
+    if (window.SKILL_OPT && SKILL_OPT.length) {
+      const log = SKILL_OPT, tb = (nm) => log.find((e) => e.name === nm);
+      const t0 = tb('test-base'), t1 = tb('test-v00'), t2 = tb('test-v10');
+      out.push(card('Teaching the AI to pick words like people', 'I rewrote a writing skill one rule at a time and kept only changes that cut the same-word rate significantly. Hover a round to see what changed.',
+        optChart(log),
+        table(['round', 'change', 'same word', 'verdict'], log.filter((e) => e.split === 'tune').map((e) => [e.name, e.note, pct(e.same_blank), e.verdict || 'reference']))));
+      if (t0 && t1 && t2) {
+        const rows = [
+          { label: 'No skill', value: t0.same_blank, color: C.ai, tip: `No skill: ${(t0.same_blank * 100).toFixed(1)}%` },
+          { label: 'humanplease', value: t1.same_blank, color: C.ai, tip: `Original humanplease skill: ${(t1.same_blank * 100).toFixed(1)}%` },
+          { label: 'Optimized', value: t2.same_blank, color: C.ai, tip: `Optimized skill: ${(t2.same_blank * 100).toFixed(1)}%` },
+          { label: 'People', value: t2.people.same_blank, color: C.human, tip: `People: ${(t2.people.same_blank * 100).toFixed(1)}%` },
+        ];
+        out.push(card('Held-out test: did it generalize?', 'On 10 stories the loop never saw: how often two answers to the same blank were the same word. Closer to people, not there yet.',
+          hbars(rows, { max: 0.5, padL: 110, fmt: (v) => (v * 100).toFixed(1) + '%', title: 'Held-out same-word rate' }),
+          table(['condition', 'same word'], rows.map((r) => [r.label, (r.value * 100).toFixed(1) + '%']))));
+      }
     }
 
     $('charts').innerHTML = out.join('');

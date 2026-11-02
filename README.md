@@ -75,6 +75,10 @@ python3 tools/analyze.py --guesses doodle-libs-research-*.json
 
 The writing skill moved word choice a little (same-blank matches down ~6 points, story-bootstrap 95% CI 0.5–11 points) but left it about 40× more repetitive than people. It targets prose style; this tell is about which word gets chosen.
 
+### Optimizing a skill to pick words like people
+
+[`research/OPTIMIZATION.md`](research/OPTIMIZATION.md) logs a loop that rewrote a writing skill one rule at a time, keeping only changes that significantly cut how often Claude gives the same answer to the same blank. On 10 held-out stories: no skill 49.2%, original humanplease 40.5%, optimized skill (`research/skill-variants/v10.md`) **14.0%**, people 1.0%. Closer, not converged. Run a round with `tools/optimize_skill.py`.
+
 ### Instagram Reel
 
 `reel/` renders a vertical 1080×1920 "Human or AI?" video with the same cartoon engine: 3 rounds, a 3-2-1 countdown for viewers to guess, then the reveal. `reel/SCRIPT.md` has a timed voiceover script and a post caption.
