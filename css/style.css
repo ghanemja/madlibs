@@ -186,3 +186,19 @@ details li { margin-bottom: 3px; }
 .compare table { border-collapse: collapse; font-size: 17px; width: 100%; }
 .compare th, .compare td { border-bottom: 1.5px solid var(--line); padding: 3px 8px; text-align: left; white-space: nowrap; }
 .compare th { font-size: 15px; color: var(--muted); }
+
+/* guess buttons stay pinned to the bottom of the story box */
+.gbar {
+  position: sticky; bottom: -12px; z-index: 2;
+  background: var(--paper); border-top: 2px dashed var(--line);
+  margin: 8px -20px -12px; padding: 6px 20px 12px;
+}
+.gbar .funny { margin-top: 0; }
+.gbar .ask-who { margin-top: 4px; font-size: 20px; }
+.gbar .row { margin-top: 6px; }
+#gResult p { margin: 2px 0; }
+#gResult .verdict { margin-top: 0; font-size: 22px; }
+@media (max-width: 600px) { .gbar { margin-left: -14px; margin-right: -14px; padding-left: 14px; padding-right: 14px; } }
+#gButtons { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
+#gButtons .ask-who { margin: 0; }
+#gButtons .row { margin: 0; }
